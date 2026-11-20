@@ -1615,6 +1615,7 @@ func run(logger *zap.Logger) error {
 			help.WithEmailSignupEnable(cfg.EmailSignupEnable),
 			help.WithEmailSignupPhonePrefixes(cfg.EmailSignupPhonePrefixes),
 			help.WithMaxUploadFileBytes(cfg.StorageMaxUploadFileBytes),
+			help.WithMediaBaseURL(cfg.PublicBaseURL),
 			help.WithAccountFreezeProvider(adminService),
 		),
 		AppUpdates:                 appUpdateResolver,
@@ -1862,6 +1863,7 @@ func run(logger *zap.Logger) error {
 		Channels:          channelStore,
 		Privacy:           privacyService,
 		Photos:            filesService,
+		Documents:         mediaStore,
 		ModerationAppeals: moderationService,
 		TelegramLogin:     telegramLoginHTTPHandler,
 	}, logger.Named("public-web")); err != nil {

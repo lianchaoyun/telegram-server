@@ -812,3 +812,127 @@ func (f *fakePhotos) GetFile(_ context.Context, req domain.FileDownloadRequest) 
 	chunk, ok := f.files[req.LocationKey]
 	return chunk, ok, nil
 }
+
+// publicMediaFixture serves document/photo metadata plus a byte slice that
+// honours Offset/Limit, so range and HEAD behaviour can be asserted.
+type publicMediaFixture struct {
+	doc   domain.Document
+	photo domain.Photo
+	data  []byte
+}
+
+func (f *publicMediaFixture) CurrentProfilePhotoKind(context.Context, domain.PeerType, int64, domain.ProfilePhotoKind) (domain.Photo, bool, error) {
+	return domain.Photo{}, false, nil
+}
+
+func (f *publicMediaFixture) GetPhoto(_ context.Context, id int64) (domain.Photo, bool, error) {
+	if f.photo.ID == id && id != 0 {
+		return f.photo, true, nil
+	}
+	return domain.Photo{}, false, nil
+}
+
+func (f *publicMediaFixture) GetFile(_ context.Context, req domain.FileDownloadRequest) (domain.FileChunk, bool, error) {
+	if f.doc.ID == 0 || req.LocationKey != "doc:1" {
+		return domain.FileChunk{}, false, nil
+	}
+	total := int64(len(f.data))
+	if req.Offset >= total {
+		return domain.FileChunk{}, false, nil
+	}
+	end := req.Offset + int64(req.Limit)
+	if end > total {
+		end = total
+	}
+	return domain.FileChunk{Bytes: f.data[req.Offset:end], Total: total}, true, nil
+}
+
+func (f *publicMediaFixture) GetDocument(_ context.Context, id int64) (domain.Document, bool, error) {
+	if f.doc.ID == id && id != 0 {
+		return f.doc, true, nil
+	}
+	return domain.Document{}, false, nil
+}
+
+func TestPublicDocumentMediaRoute(t *testing.T) {
+	data := []byte("0123456789")
+	media := &publicMediaFixture{
+		doc: domain.Document{
+			ID:         1,
+			AccessHash: 42,
+			Size:       int64(len(data)),
+			MimeType:   "text/plain",
+		},
+		data: data,
+	}
+	h, err := NewHandler(Config{
+		StickerSets:   fakeResolver{},
+		Photos:        media,
+		Documents:     media,
+		PublicBaseURL: "http://127.0.0.1:2401",
+	})
+	if err != nil {
+		t.Fatalf("NewHandler: %v", err)
+	}
+
+	wrongHash := httptest.NewRecorder()
+	h.ServeHTTP(wrongHash, httptest.NewRequest(http.MethodGet, "/file/1/7", nil))
+	if wrongHash.Code != http.StatusNotFound {
+		t.Fatalf("wrong access hash status = %d, want 404", wrongHash.Code)
+	}
+
+	full := httptest.NewRecorder()
+	h.ServeHTTP(full, httptest.NewRequest(http.MethodGet, "/file/1/42", nil))
+	if full.Code != http.StatusOK || full.Body.String() != string(data) {
+		t.Fatalf("full status=%d body=%q", full.Code, full.Body.String())
+	}
+	if got := full.Header().Get("Accept-Ranges"); got != "bytes" {
+		t.Fatalf("Accept-Ranges = %q, want bytes", got)
+	}
+
+	rangeRequest := httptest.NewRequest(http.MethodGet, "/file/1/42", nil)
+	rangeRequest.Header.Set("Range", "bytes=2-4")
+	partial := httptest.NewRecorder()
+	h.ServeHTTP(partial, rangeRequest)
+	if partial.Code != http.StatusPartialContent || partial.Body.String() != "234" {
+		t.Fatalf("range status=%d body=%q", partial.Code, partial.Body.String())
+	}
+	if got := partial.Header().Get("Content-Range"); got != "bytes 2-4/10" {
+		t.Fatalf("Content-Range = %q", got)
+	}
+
+	head := httptest.NewRecorder()
+	h.ServeHTTP(head, httptest.NewRequest(http.MethodHead, "/file/1/42", nil))
+	if head.Code != http.StatusOK || head.Body.Len() != 0 {
+		t.Fatalf("head status=%d body=%q", head.Code, head.Body.String())
+	}
+}
+
+func TestPublicPhotoMediaRoute(t *testing.T) {
+	media := &publicMediaFixture{
+		photo: domain.Photo{
+			ID:         9,
+			AccessHash: 77,
+			Sizes: []domain.PhotoSize{{
+				Kind: domain.PhotoSizeKindDefault,
+				Type: "x",
+				W:    800,
+				H:    600,
+				Size: 12,
+			}},
+		},
+	}
+	h, err := NewHandler(Config{
+		StickerSets:   fakeResolver{},
+		Photos:        media,
+		PublicBaseURL: "http://127.0.0.1:2401",
+	})
+	if err != nil {
+		t.Fatalf("NewHandler: %v", err)
+	}
+	bad := httptest.NewRecorder()
+	h.ServeHTTP(bad, httptest.NewRequest(http.MethodGet, "/photo/9/x/7", nil))
+	if bad.Code != http.StatusNotFound {
+		t.Fatalf("wrong access hash status = %d, want 404", bad.Code)
+	}
+}

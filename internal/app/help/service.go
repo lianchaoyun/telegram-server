@@ -67,7 +67,7 @@ const tdesktopClient = "tdesktop"
 const tdesktopDefaultAppConfigBase = `{"chat_read_mark_expire_period":604800,"chat_read_mark_size_threshold":50,"pm_read_date_expire_period":604800,"quote_length_max":1024,"telegram_antispam_group_size_min":200,"telegram_antispam_user_id":"5434988373","fragment_prefixes":["888"],"forum_upgrade_participants_min":2,"reactions_default":{"_":"reactionEmoji","emoticon":"👍"},"reactions_uniq_max":11,"reactions_user_max_default":1,"reactions_user_max_premium":3,"reactions_in_chat_max":3,"boosts_channel_level_max":100,"rich_message_posting":"enabled","ephemeral_welcome_messages_max":5,"upload_markup_video":true,"emojies_send_dice":["🎲","🎯","🏀","⚽","⚽️","🎳","🎰"],"premium_purchase_blocked":false,"stars_purchase_blocked":false,"stargifts_blocked":false,"stargifts_pinned_to_top_limit":6,"giveaway_gifts_purchase_available":true,"giveaway_boosts_per_premium":4,"giveaway_countries_max":10,"giveaway_add_peers_max":10,"giveaway_period_max":604800,"stories_stealth_future_period":1500,"stories_stealth_past_period":300,"stories_stealth_cooldown_period":10800,"quick_replies_limit":100,"quick_reply_messages_limit":20,"business_chat_links_limit":100,"dialog_filters_enabled":true,"chatlist_update_period":3600,"chatlist_invites_limit_default":3,"chatlist_invites_limit_premium":20,"chatlists_joined_limit_default":2,"chatlists_joined_limit_premium":20,"about_length_limit_default":70,"about_length_limit_premium":140,"bot_verification_description_length_limit":128,"caption_length_limit_default":1024,"caption_length_limit_premium":4096,"channels_limit_default":500,"channels_limit_premium":1000,"channels_public_limit_default":10,"channels_public_limit_premium":20,"dialog_filters_limit_default":10,"dialog_filters_limit_premium":20,"dialog_filters_chats_limit_default":100,"dialog_filters_chats_limit_premium":200,"dialogs_pinned_limit_default":5,"dialogs_pinned_limit_premium":10,"dialogs_folder_pinned_limit_default":100,"dialogs_folder_pinned_limit_premium":200,"saved_dialogs_pinned_limit_default":5,"saved_dialogs_pinned_limit_premium":100,"saved_gifs_limit_default":200,"saved_gifs_limit_premium":400,"stickers_faved_limit_default":5,"stickers_faved_limit_premium":10,"recommended_channels_limit_default":10,"recommended_channels_limit_premium":100,"aicompose_tone_examples_num":3,"aicompose_tone_title_length_max":12,"aicompose_tone_prompt_length_max":1024,"aicompose_tone_saved_limit_default":5,"aicompose_tone_saved_limit_premium":20,"upload_max_fileparts_default":4000,"upload_max_fileparts_premium":8000,"gif_search_username":"gif"`
 const tdesktopNoForwardsAppConfig = `,"no_forwards_request_expire_period":86400`
 
-const defaultAppConfigHash = 32 // 默认 app config 内容变更时必须递增，否则缓存端只会收到 notModified。
+const defaultAppConfigHash = 33 // 默认 app config 内容变更时必须递增，否则缓存端只会收到 notModified。
 
 // Service 提供客户端启动配置与国家区号目录。
 //
@@ -83,6 +83,7 @@ type Service struct {
 	emailSignupEnable        bool
 	emailSignupPhonePrefixes []string
 	maxUploadFileBytes       int64
+	mediaBaseURL             string
 
 	appConfigOnce  sync.Once
 	appConfigCache domain.AppConfig
@@ -127,6 +128,14 @@ func WithEmailSignupEnable(enabled bool) Option {
 func WithEmailSignupPhonePrefixes(prefixes []string) Option {
 	return func(s *Service) {
 		s.emailSignupPhonePrefixes = prefixes
+	}
+}
+
+// WithMediaBaseURL 下发 media_base_url：客户端用它拼接媒体 HTTP 直链
+// （<base>/file/<documentID>/<accessHash> 或 <base>/photo/<id>/<size>/<hash>）。
+func WithMediaBaseURL(raw string) Option {
+	return func(s *Service) {
+		s.mediaBaseURL = strings.TrimRight(strings.TrimSpace(raw), "/")
 	}
 }
 
@@ -180,12 +189,12 @@ func NewService(appConfigs store.AppConfigStore, countries store.CountryStore, o
 	return s
 }
 
-func defaultAppConfig(mapboxToken string, emailSignupEnable bool, emailSignupPhonePrefixes []string, maxUploadFileBytes int64) domain.AppConfig {
-	jsonBytes := defaultAppConfigJSON(mapboxToken, emailSignupEnable, emailSignupPhonePrefixes, maxUploadFileBytes)
-	return domain.AppConfig{Client: tdesktopClient, Hash: defaultAppConfigHashFor(mapboxToken, emailSignupEnable, emailSignupPhonePrefixes, maxUploadFileBytes), JSON: jsonBytes}
+func defaultAppConfig(mapboxToken string, emailSignupEnable bool, emailSignupPhonePrefixes []string, maxUploadFileBytes int64, mediaBaseURL string) domain.AppConfig {
+	jsonBytes := defaultAppConfigJSON(mapboxToken, emailSignupEnable, emailSignupPhonePrefixes, maxUploadFileBytes, mediaBaseURL)
+	return domain.AppConfig{Client: tdesktopClient, Hash: defaultAppConfigHashFor(mapboxToken, emailSignupEnable, emailSignupPhonePrefixes, maxUploadFileBytes, mediaBaseURL), JSON: jsonBytes}
 }
 
-func defaultAppConfigJSON(mapboxToken string, emailSignupEnable bool, emailSignupPhonePrefixes []string, maxUploadFileBytes int64) []byte {
+func defaultAppConfigJSON(mapboxToken string, emailSignupEnable bool, emailSignupPhonePrefixes []string, maxUploadFileBytes int64, mediaBaseURL string) []byte {
 	androidInvoiceBilling := `,"premium_playmarket_direct_currency_list":` + compatandroid.DirectInvoiceCurrenciesJSON()
 	base := tdesktopDefaultAppConfigBase + tdesktopNoForwardsAppConfig + androidInvoiceBilling + `,"inapp_update_check_delay":300`
 	if emailSignupEnable {
@@ -201,6 +210,11 @@ func defaultAppConfigJSON(mapboxToken string, emailSignupEnable bool, emailSignu
 		base = strings.Replace(base, `"upload_max_fileparts_default":4000`, `"upload_max_fileparts_default":`+parts, 1)
 		base = strings.Replace(base, `"upload_max_fileparts_premium":8000`, `"upload_max_fileparts_premium":`+parts, 1)
 	}
+	if mediaBaseURL != "" {
+		if encoded, err := json.Marshal(mediaBaseURL); err == nil {
+			base += `,"media_base_url":` + string(encoded)
+		}
+	}
 	if mapboxToken == "" {
 		return []byte(base + `}`)
 	}
@@ -212,8 +226,11 @@ func defaultAppConfigJSON(mapboxToken string, emailSignupEnable bool, emailSignu
 	return []byte(base + `,"tdesktop_config_map":{"maps":` + tokenJSON + `,"geo":` + tokenJSON + `,"bmaps":` + tokenJSON + `,"bgeo":` + tokenJSON + `}}`)
 }
 
-func defaultAppConfigHashFor(mapboxToken string, emailSignupEnable bool, emailSignupPhonePrefixes []string, maxUploadFileBytes int64) int {
+func defaultAppConfigHashFor(mapboxToken string, emailSignupEnable bool, emailSignupPhonePrefixes []string, maxUploadFileBytes int64, mediaBaseURL string) int {
 	h := defaultAppConfigHash
+	if mediaBaseURL != "" {
+		h += 1 + int(crc32.ChecksumIEEE([]byte(mediaBaseURL))&0x3fffffff)
+	}
 	if emailSignupEnable {
 		h += 1000003 // large odd offset so toggling the flag always changes the hash
 		if len(emailSignupPhonePrefixes) > 0 {
@@ -288,9 +305,9 @@ func (s *Service) accountAppConfig(ctx context.Context, userID int64, base domai
 
 func (s *Service) loadAppConfig(ctx context.Context) domain.AppConfig {
 	if s == nil {
-		return defaultAppConfig("", false, nil, 0)
+		return defaultAppConfig("", false, nil, 0, "")
 	}
-	defaultCfg := defaultAppConfig(s.mapboxToken, s.emailSignupEnable, s.emailSignupPhonePrefixes, s.maxUploadFileBytes)
+	defaultCfg := defaultAppConfig(s.mapboxToken, s.emailSignupEnable, s.emailSignupPhonePrefixes, s.maxUploadFileBytes, s.mediaBaseURL)
 	s.appConfigOnce.Do(func() {
 		if s.appConfigs == nil {
 			s.appConfigCache = defaultCfg

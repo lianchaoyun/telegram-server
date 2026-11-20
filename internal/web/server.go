@@ -34,6 +34,7 @@ type Config struct {
 	Channels          PublicChannelResolver
 	Privacy           AnonymousPrivacyResolver
 	Photos            ProfilePhotoResolver
+	Documents         DocumentResolver
 	ModerationAppeals ModerationAppealResolver
 	// TelegramLogin is the optional OIDC/Login HTTP adapter. Public Web owns
 	// the listener so discovery/auth/token and public links share the exact
@@ -66,6 +67,13 @@ type ProfilePhotoResolver interface {
 	CurrentProfilePhotoKind(ctx context.Context, ownerType domain.PeerType, ownerID int64, kind domain.ProfilePhotoKind) (domain.Photo, bool, error)
 	GetPhoto(ctx context.Context, id int64) (domain.Photo, bool, error)
 	GetFile(ctx context.Context, req domain.FileDownloadRequest) (domain.FileChunk, bool, error)
+}
+
+// DocumentResolver exposes immutable document metadata for the public media
+// link routes. Bytes are served through ProfilePhotoResolver.GetFile so the
+// same blob cache and backend are reused.
+type DocumentResolver interface {
+	GetDocument(ctx context.Context, id int64) (domain.Document, bool, error)
 }
 
 type ModerationAppealResolver interface {
@@ -181,6 +189,7 @@ func newHandler(cfg Config, logger *zap.Logger) (http.Handler, error) {
 		channels:      cfg.Channels,
 		privacy:       cfg.Privacy,
 		photos:        cfg.Photos,
+		documents:     cfg.Documents,
 		appeals:       cfg.ModerationAppeals,
 		publicBaseURL: cfg.PublicBaseURL,
 		publicHost:    publicHost,
@@ -197,6 +206,8 @@ func newHandler(cfg Config, logger *zap.Logger) (http.Handler, error) {
 	mux.HandleFunc("GET /_public/assets/fonts/{file}", h.brandFont)
 	mux.HandleFunc("GET /_public/avatar/{username}/{photoID}", h.publicAvatar)
 	mux.HandleFunc("GET /_public/invite-avatar/{hash}/{photoID}", h.publicInviteAvatar)
+	mux.HandleFunc("GET /file/{documentID}/{accessHash}", h.publicDocument)
+	mux.HandleFunc("GET /photo/{photoID}/{sizeType}/{accessHash}", h.publicPhoto)
 	mux.HandleFunc("GET /addstickers/{shortName}", h.addStickers)
 	mux.HandleFunc("GET /addemoji/{shortName}", h.addEmoji)
 	mux.HandleFunc("GET /addlist/{slug}", h.addList)
@@ -229,6 +240,7 @@ type handler struct {
 	channels      PublicChannelResolver
 	privacy       AnonymousPrivacyResolver
 	photos        ProfilePhotoResolver
+	documents     DocumentResolver
 	appeals       ModerationAppealResolver
 	publicBaseURL string
 	publicHost    string
@@ -605,6 +617,202 @@ func (h *handler) servePeerAvatarPhoto(w http.ResponseWriter, r *http.Request, p
 	}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
+}
+
+const publicMediaChunkBytes = 1 << 20
+
+// publicDocument serves an immutable document blob by id + access hash. The
+// access hash is the only credential; links are meant to be copyable, so the
+// route deliberately avoids account sessions.
+func (h *handler) publicDocument(w http.ResponseWriter, r *http.Request) {
+	documentID, err := strconv.ParseInt(r.PathValue("documentID"), 10, 64)
+	if err != nil || documentID <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+	accessHash, err := strconv.ParseInt(r.PathValue("accessHash"), 10, 64)
+	if err != nil || h.documents == nil || h.photos == nil {
+		http.NotFound(w, r)
+		return
+	}
+	doc, found, err := h.documents.GetDocument(r.Context(), documentID)
+	if err != nil {
+		h.logger.Error("Read public document failed", zap.Int64("document_id", documentID), zap.Error(err))
+		http.Error(w, "document read failed", http.StatusInternalServerError)
+		return
+	}
+	if !found || doc.ID == 0 || doc.AccessHash == 0 || doc.AccessHash != accessHash || doc.Size <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+	mimeType := strings.TrimSpace(doc.MimeType)
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	fileName := ""
+	for _, attr := range doc.Attributes {
+		if attr.Kind == domain.DocAttrFilename && strings.TrimSpace(attr.FileName) != "" {
+			fileName = strings.TrimSpace(attr.FileName)
+			break
+		}
+	}
+	h.servePublicMedia(w, r, fmt.Sprintf("doc:%d", doc.ID), mimeType, fileName, doc.Size)
+}
+
+// publicPhoto serves one downloadable photo size by id + type + access hash.
+func (h *handler) publicPhoto(w http.ResponseWriter, r *http.Request) {
+	photoID, err := strconv.ParseInt(r.PathValue("photoID"), 10, 64)
+	if err != nil || photoID <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+	accessHash, err := strconv.ParseInt(r.PathValue("accessHash"), 10, 64)
+	if err != nil || h.photos == nil {
+		http.NotFound(w, r)
+		return
+	}
+	sizeType := strings.TrimSpace(r.PathValue("sizeType"))
+	if sizeType == "" {
+		http.NotFound(w, r)
+		return
+	}
+	photo, found, err := h.photos.GetPhoto(r.Context(), photoID)
+	if err != nil {
+		h.logger.Error("Read public photo failed", zap.Int64("photo_id", photoID), zap.Error(err))
+		http.Error(w, "photo read failed", http.StatusInternalServerError)
+		return
+	}
+	if !found || photo.ID == 0 || photo.AccessHash == 0 || photo.AccessHash != accessHash {
+		http.NotFound(w, r)
+		return
+	}
+	var size *domain.PhotoSize
+	for i := range photo.Sizes {
+		if photo.Sizes[i].Type == sizeType && photo.Sizes[i].Downloadable() {
+			size = &photo.Sizes[i]
+			break
+		}
+	}
+	if size == nil && sizeType == "max" {
+		for i := range photo.Sizes {
+			item := &photo.Sizes[i]
+			if !item.Downloadable() {
+				continue
+			}
+			if size == nil || int64(item.W)*int64(item.H) > int64(size.W)*int64(size.H) {
+				size = item
+			}
+		}
+	}
+	if size == nil || size.Size <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+	h.servePublicMedia(w, r, fmt.Sprintf("photo:%d:%s", photo.ID, size.Type), "image/jpeg", "", int64(size.Size))
+}
+
+func (h *handler) servePublicMedia(
+	w http.ResponseWriter,
+	r *http.Request,
+	locationKey, contentType, fileName string,
+	total int64,
+) {
+	if total <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+	start, end := int64(0), total-1
+	partial := false
+	if raw := strings.TrimSpace(r.Header.Get("Range")); raw != "" {
+		from, to, ok := parsePublicMediaRange(raw, total)
+		if !ok {
+			w.Header().Set("Content-Range", fmt.Sprintf("bytes */%d", total))
+			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+			return
+		}
+		start, end, partial = from, to, true
+	}
+	w.Header().Set("Accept-Ranges", "bytes")
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
+	w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
+	if fileName != "" {
+		w.Header().Set("Content-Disposition", "inline; filename*=UTF-8''"+url.PathEscape(fileName))
+	}
+	if partial {
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, total))
+		w.WriteHeader(http.StatusPartialContent)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
+	if r.Method == http.MethodHead {
+		return
+	}
+	for offset := start; offset <= end; {
+		limit := int64(publicMediaChunkBytes)
+		if remaining := end - offset + 1; remaining < limit {
+			limit = remaining
+		}
+		chunk, found, err := h.photos.GetFile(r.Context(), domain.FileDownloadRequest{
+			LocationKey: locationKey,
+			Offset:      offset,
+			Limit:       int(limit),
+		})
+		if err != nil || !found || len(chunk.Bytes) == 0 {
+			if err != nil {
+				h.logger.Error("Read public media chunk failed",
+					zap.String("location_key", locationKey),
+					zap.Int64("offset", offset),
+					zap.Error(err))
+			}
+			return
+		}
+		if _, err := w.Write(chunk.Bytes); err != nil {
+			return
+		}
+		offset += int64(len(chunk.Bytes))
+		if int64(len(chunk.Bytes)) < limit {
+			return
+		}
+	}
+}
+
+func parsePublicMediaRange(raw string, total int64) (int64, int64, bool) {
+	if total <= 0 || !strings.HasPrefix(raw, "bytes=") {
+		return 0, 0, false
+	}
+	spec := strings.TrimSpace(strings.TrimPrefix(raw, "bytes="))
+	if comma := strings.IndexByte(spec, ','); comma >= 0 {
+		spec = strings.TrimSpace(spec[:comma])
+	}
+	parts := strings.SplitN(spec, "-", 2)
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	if parts[0] == "" {
+		suffix, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil || suffix <= 0 {
+			return 0, 0, false
+		}
+		if suffix > total {
+			suffix = total
+		}
+		return total - suffix, total - 1, true
+	}
+	from, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil || from < 0 || from >= total {
+		return 0, 0, false
+	}
+	to := total - 1
+	if parts[1] != "" {
+		if parsed, err := strconv.ParseInt(parts[1], 10, 64); err == nil && parsed < to {
+			to = parsed
+		}
+	}
+	if to < from {
+		return 0, 0, false
+	}
+	return from, to, true
 }
 
 func (h *handler) serveSet(w http.ResponseWriter, r *http.Request, pathKind string) {
