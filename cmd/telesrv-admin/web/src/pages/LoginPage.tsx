@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, errorMessage } from "../api";
 import { AppBackground } from "../components/AppBackground";
 import { Alert } from "../components/ui";
+import { LanguageSwitch } from "../i18n";
 import { ThemeSwitch } from "../theme";
 import type { AdminSession, PublicBranding } from "../types";
 
@@ -106,6 +107,7 @@ export function LoginPage({ onLogin }: { onLogin: (session: AdminSession) => voi
             </span>
           </div>
           <div className="login-head-actions">
+            <LanguageSwitch />
             <ThemeSwitch />
           </div>
         </div>

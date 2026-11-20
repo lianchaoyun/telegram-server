@@ -37,6 +37,7 @@ import { permissionBotVerificationReview, permissionServerManage, permissionAdmi
   permissionContentRead,
   permissionUsernamesRead,
   permissionVerificationReview, useCan, useThirdPartyVerificationHidden } from "../permissions";
+import { LanguageSwitch, useI18n } from "../i18n";
 import { type Navigate, type RouteState, routeTitle } from "../routing";
 import { ThemeSwitch } from "../theme";
 import { AddServerLinkModal } from "./AddServerLinkModal";
@@ -97,6 +98,7 @@ export function Shell({
   onLogout: () => void;
   children: ReactNode;
 }) {
+  const { language } = useI18n();
   // The verification queue is hidden for a session without verification.review:
   // the entry would only lead to a 403 (and the route itself is gated as well).
   const canReviewVerification = useCan(permissionVerificationReview);
@@ -183,8 +185,8 @@ export function Shell({
   // override as the sidebar brand above, so a re-labeled server actually
   // looks like itself in the tab strip too, not just inside the app.
   useEffect(() => {
-    document.title = `${brandName} Admin`;
-  }, [brandName]);
+    document.title = language === "zh" ? `${brandName} 管理后台` : `${brandName} Admin`;
+  }, [brandName, language]);
   useEffect(() => {
     let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
     if (!link) {
@@ -371,6 +373,7 @@ export function Shell({
             <h1>{routeTitle(route.path)}</h1>
           </div>
           <div className="topbar-actions">
+            <LanguageSwitch />
             <ThemeSwitch />
             <span className="actor-pill"><UserRound size={14} /> {actor}</span>
             <button className="btn ghost icon-text" type="button" onClick={logout} title={"Log out"}>

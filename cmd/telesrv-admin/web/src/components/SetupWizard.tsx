@@ -2,6 +2,7 @@ import { ArrowRight, Check, ImagePlus, Loader2, Rocket, UserPlus } from "lucide-
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "../api";
+import { LanguageSwitch } from "../i18n";
 import { RestartOverlay, ServerIconModal, useAdminRestartWatcher } from "../pages/ServerSettingsPage";
 import { ThemeSwitch } from "../theme";
 import { AppBackground } from "./AppBackground";
@@ -64,6 +65,7 @@ export function SetupWizard() {
             </span>
           </div>
           <div className="login-head-actions">
+            <LanguageSwitch />
             <ThemeSwitch />
           </div>
         </div>

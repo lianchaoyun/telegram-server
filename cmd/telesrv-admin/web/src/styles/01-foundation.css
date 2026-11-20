@@ -479,6 +479,16 @@ a {
   outline-offset: 2px;
 }
 
+.lang-toggle {
+  display: inline-flex;
+  width: auto;
+  padding: 0 10px;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .actor-pill {
   display: inline-flex;
   min-height: 30px;

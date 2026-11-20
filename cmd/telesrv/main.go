@@ -1251,7 +1251,7 @@ func run(logger *zap.Logger) error {
 	// them with the active branding on startup so the seeded "telesrv" text is
 	// replaced. SetBotInfo writes both fields; the sync is a no-op when the text
 	// already matches.
-	for _, botID := range []int64{domain.ChatBotUserID, domain.StickersBotUserID} {
+	for _, botID := range []int64{domain.ChatBotUserID, domain.StickersBotUserID, domain.VerifyBotUserID} {
 		var wantAbout, wantDesc string
 		switch botID {
 		case domain.ChatBotUserID:
@@ -1259,6 +1259,9 @@ func run(logger *zap.Logger) error {
 			wantDesc = wantAbout
 		case domain.StickersBotUserID:
 			wantAbout = domain.StickersBotDescription()
+			wantDesc = wantAbout
+		case domain.VerifyBotUserID:
+			wantAbout = domain.VerifyBotDescription()
 			wantDesc = wantAbout
 		}
 		if _, curAbout, curDesc, err := botsService.GetBotInfo(ctx, botID); err == nil && curAbout == wantAbout && curDesc == wantDesc {

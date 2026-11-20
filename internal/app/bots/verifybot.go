@@ -14,7 +14,6 @@ import (
 	"go.uber.org/zap"
 
 	verificationapp "telesrv/internal/app/verification"
-	"telesrv/internal/branding"
 	"telesrv/internal/domain"
 )
 
@@ -115,65 +114,65 @@ const (
 )
 
 func verifyBotStartText() string {
-	return `I collect applications for official ` + branding.ProductName() + ` verification: the badge shown next to the name of a channel, supergroup or bot whose identity has been confirmed.
+	return `我负责收集官方认证申请：认证徽章会显示在已确认身份的频道、超级群组或机器人名称旁。
 
-Before you apply, check that the subject of the application:
-- is a channel, supergroup or bot with a public @username;
-- is one you created or administer;
-- stands for a real organisation, brand, media outlet, institution or public figure;
-- has been written about by press you do not control.
+提交前，请确认申请对象：
+- 是有公开 @username 的频道、超级群组或机器人；
+- 是你创建或管理的；
+- 代表真实的组织、品牌、媒体、机构或公众人物；
+- 有过你无法控制的媒体报道。
 
-This badge is never sold and never granted automatically. A person reads every application, and I message you here with the decision.
+此徽章绝不出售，也不会自动发放。每一份申请都由人工审核，审核结果我会在这里通知你。
 
-Tap the button below, or send /new, to start. Send /help for the full list of commands.`
+点击下方按钮，或发送 /new 开始。发送 /help 查看全部命令。`
 }
 
 func verifyBotHelpText() string {
-	return `I collect official ` + branding.ProductName() + ` verification applications.
+	return `我负责收集官方认证申请。
 
-/new - file a verification application
-/status - list your applications and their status
-/cancel - withdraw the application you are working on
-/help - show this message
+/new - 提交认证申请
+/status - 查看你提交的申请及状态
+/cancel - 撤回正在填写的申请
+/help - 显示本说明
 
-One application asks for: the subject, a category, a description, the official website, optional social links, links to independent press coverage, and an optional comment for the reviewers. You can send /cancel at any point, and /status any time after filing.`
+一份申请需要填写：申请对象、分类、描述、官方网站、可选的社交链接、独立媒体报道链接，以及给审核员的可选备注。任何时候都可以发送 /cancel 取消，提交后可随时用 /status 查看。`
 }
 
-const verifyBotIdleText = `I only collect official verification applications. Send /new to file one, /status to check the ones you filed, or /help to see what I understand.`
+const verifyBotIdleText = `我只负责收集官方认证申请。发送 /new 提交申请，发送 /status 查看已提交的申请，或发送 /help 查看我能做什么。`
 
 const (
-	verifyPromptTargetText   = `Which one do you want verified? Pick it below.`
-	verifyPromptCategoryText = `What kind of project is it? Pick the closest category.`
+	verifyPromptTargetText   = `你想认证哪一个？请在下方选择。`
+	verifyPromptCategoryText = `它属于哪一类？请选择最接近的分类。`
 
-	verifyPromptDescriptionTmpl = `Now describe the subject in one message: what it is, who is behind it and what it is publicly known for. Between %d and %d characters.`
+	verifyPromptDescriptionTmpl = `现在用一条消息描述申请对象：它是什么、由谁运营、因何而知名。字数需在 %d 到 %d 个字符之间。`
 
-	verifyPromptWebsiteText = `Send the official website of the subject, for example https://example.com
+	verifyPromptWebsiteText = `请发送该对象的官方网站，例如 https://example.com
 
-It has to be a plain public http(s) address. I never open the links you send: they are stored and shown to the reviewers as links, nothing more.`
+必须是公开的 http(s) 地址。我不会打开你发送的链接：它们只会作为链接保存并展示给审核员。`
 
-	verifyPromptSocialTmpl = `Send links to the official social media accounts of the subject, one per line, up to %d of them. Tap Skip if there are none.`
+	verifyPromptSocialTmpl = `请发送该对象官方社交媒体账号的链接，每行一个，最多 %d 个。如果没有，请点击“跳过”。`
 
-	verifyPromptPressTmpl = `Send links to independent press coverage, one per line: at least %d of them, up to %d.
+	verifyPromptPressTmpl = `请发送独立媒体报道的链接，每行一个：至少 %d 个，最多 %d 个。
 
-This is the part a reviewer actually checks, so it has to be coverage you do not control -- articles about the subject on news sites, not your own pages or social posts.`
+这是审核员真正会核查的部分，因此必须是你无法控制的报道——新闻网站关于该对象的文章，而不是你自己的页面或社交帖子。`
 
-	verifyPromptNoteText = `Anything else the reviewers should know? Send it in one message, or tap Skip.`
+	verifyPromptNoteText = `还有什么需要审核员知道的？请用一条消息发送，或点击“跳过”。`
 
-	verifyURLRejectText = `That is not a link I can accept. It has to be a plain http:// or https:// address of a public site, with no login credentials and no unusual port -- for example https://example.com/news/story.`
+	verifyURLRejectText = `这个链接我无法接受。必须是公开网站的 http:// 或 https:// 地址，不能包含登录凭据，也不能使用异常端口——例如 https://example.com/news/story。`
 
-	verifyExpiredButtonText   = `That button is no longer active. Send /new to start an application, or /status to see the ones you filed.`
-	verifyUnavailableText     = `Official verification is not available on this server right now.`
-	verifyNoTargetsText       = `I could not find anything of yours to verify. Official verification covers a channel, supergroup or bot with a public @username that you created or administer, so give the subject a public username first and come back with /new.`
-	verifyNoEligibleText      = `None of the ones you administer can be filed right now. Tap any of them to see why.`
-	verifyPickButtonsText     = `Please use the buttons in my message above.`
-	verifyNothingToCancelText = `There is nothing to cancel. Send /new to file an application.`
-	verifyNoApplicationsText  = `You have not filed any verification applications yet. Send /new to file one.`
-	verifyIncompleteText      = `The application is not complete yet, so let's fill the missing part first.`
+	verifyExpiredButtonText   = `该按钮已失效。发送 /new 开始申请，或发送 /status 查看已提交的申请。`
+	verifyUnavailableText     = `此服务器目前未开放官方认证。`
+	verifyNoTargetsText       = `我没有找到你可以认证的对象。官方认证只覆盖你创建或管理的、带公开 @username 的频道、超级群组或机器人；请先为它设置公开用户名，然后再发送 /new 回来。`
+	verifyNoEligibleText      = `你管理的对象目前都不能提交申请。点击任意一个即可查看原因。`
+	verifyPickButtonsText     = `请使用我上方消息中的按钮。`
+	verifyNothingToCancelText = `没有可取消的申请。发送 /new 提交申请。`
+	verifyNoApplicationsText  = `你还没有提交过认证申请。发送 /new 提交一份。`
+	verifyIncompleteText      = `申请还未填写完整，我们先把缺少的部分补上。`
 
-	verifySubmitButtonText = `Submit application`
-	verifySkipButtonText   = `Skip`
-	verifyCancelButtonText = `Cancel application`
-	verifyApplyButtonText  = `Apply for verification`
+	verifySubmitButtonText = `提交申请`
+	verifySkipButtonText   = `跳过`
+	verifyCancelButtonText = `取消申请`
+	verifyApplyButtonText  = `申请认证`
 )
 
 // verifyBotGlobalCommands are the commands honoured in every step, so an
@@ -187,17 +186,17 @@ var verifyBotGlobalCommands = map[string]bool{
 // missing entry falls back to the raw value, so adding a category cannot make the
 // picker disappear.
 var verifyCategoryLabels = map[string]string{
-	"media":         "Media outlet",
-	"government":    "Government",
-	"company":       "Company",
-	"brand":         "Brand",
-	"sport":         "Sport",
-	"culture":       "Culture",
-	"education":     "Education",
-	"nonprofit":     "Non-profit",
-	"public_figure": "Public figure",
-	"service":       "Service",
-	"other":         "Other",
+	"media":         "媒体机构",
+	"government":    "政府机构",
+	"company":       "公司",
+	"brand":         "品牌",
+	"sport":         "体育",
+	"culture":       "文化",
+	"education":     "教育",
+	"nonprofit":     "非营利组织",
+	"public_figure": "公众人物",
+	"service":       "服务",
+	"other":         "其他",
 }
 
 // verifyOption is one inline button before its token is minted.
@@ -253,9 +252,9 @@ func (s *Service) allowVerifyDialog(ctx context.Context, userID int64) (bool, in
 
 func verifyFloodText(retryAfter int) string {
 	if retryAfter > 0 {
-		return fmt.Sprintf("Too many requests. Please wait %d seconds and try again.", retryAfter)
+		return fmt.Sprintf("请求过于频繁，请等待 %d 秒后重试。", retryAfter)
 	}
-	return "Too many requests. Please wait a moment and try again."
+	return "请求过于频繁，请稍后重试。"
 }
 
 func (s *Service) handleVerify(ctx context.Context, userID int64, body string) botReply {
@@ -275,7 +274,7 @@ func (s *Service) handleVerify(ctx context.Context, userID int64, body string) b
 		if verifyBotGlobalCommands[cmd] {
 			return s.handleVerifyCommand(ctx, userID, cmd, state, found)
 		}
-		return botReply{Text: "I do not know that command. Send /help for the list."}
+		return botReply{Text: "我不认识这个命令。发送 /help 查看命令列表。"}
 	}
 	if !found {
 		if text == "" {
@@ -308,7 +307,7 @@ func (s *Service) handleVerify(ctx context.Context, userID int64, body string) b
 		return botReply{Text: verifyPickButtonsText}
 	default:
 		s.deleteVerifyState(ctx, userID)
-		return botReply{Text: "Something went wrong, I forgot what we were doing. Send /new to start again."}
+		return botReply{Text: "出了点问题，我忘记刚才进行到哪一步了。发送 /new 重新开始。"}
 	}
 }
 
@@ -477,7 +476,7 @@ func (s *Service) startVerifyApplication(ctx context.Context, state domain.BotCh
 	switch {
 	case err == nil && app.ID > 0:
 		verifyHydrateState(&state, app)
-		lead := fmt.Sprintf("You already have application #%d in progress for %s, so let's carry on. Send /cancel to drop it and start over.",
+		lead := fmt.Sprintf("你已有一份进行中的申请 #%d（对象：%s），我们继续。发送 /cancel 放弃它并重新开始。",
 			app.ID, verifyTargetLabel(app.TargetTitle, app.TargetUsername))
 		return s.verifyAdvance(ctx, state, verifyMissingStep(verifyDraftInputOf(app)), lead)
 	case err != nil && !errors.Is(err, domain.ErrVerificationApplicationNotFound):
@@ -512,11 +511,11 @@ func (s *Service) chooseVerifyTarget(ctx context.Context, state domain.BotChatSt
 	if !created && (app.TargetID != targetID || app.TargetType != targetType) {
 		// One draft per applicant is the store's contract, so say so instead of
 		// silently switching the subject under the applicant.
-		return botReply{Text: fmt.Sprintf("You already have application #%d in progress for %s. Send /cancel to drop it, then /new to pick another subject.",
+		return botReply{Text: fmt.Sprintf("你已有一份进行中的申请 #%d（对象：%s）。发送 /cancel 放弃它，再用 /new 选择其他对象。",
 			app.ID, verifyTargetLabel(app.TargetTitle, app.TargetUsername))}
 	}
 	verifyHydrateState(&state, app)
-	lead := fmt.Sprintf("Subject: %s. This is application #%d.", verifyTargetLabel(app.TargetTitle, app.TargetUsername), app.ID)
+	lead := fmt.Sprintf("申请对象：%s。这是申请 #%d。", verifyTargetLabel(app.TargetTitle, app.TargetUsername), app.ID)
 	return s.verifyAdvance(ctx, state, verifyMissingStep(verifyDraftInputOf(app)), lead)
 }
 
@@ -530,7 +529,7 @@ func (s *Service) chooseVerifyCategory(ctx context.Context, state domain.BotChat
 	if reply, ok := s.saveVerifyDraft(ctx, &state); !ok {
 		return reply
 	}
-	return s.verifyAdvance(ctx, state, verifyStepDescription, "Category: "+verifyCategoryLabel(payload)+".")
+	return s.verifyAdvance(ctx, state, verifyStepDescription, "分类："+verifyCategoryLabel(payload)+"。")
 }
 
 func (s *Service) skipVerifyStep(ctx context.Context, state domain.BotChatState) botReply {
@@ -541,13 +540,13 @@ func (s *Service) skipVerifyStep(ctx context.Context, state domain.BotChatState)
 		if reply, ok := s.saveVerifyDraft(ctx, &state); !ok {
 			return reply
 		}
-		return s.verifyAdvance(ctx, state, verifyStepPress, "No social links.")
+		return s.verifyAdvance(ctx, state, verifyStepPress, "没有社交链接。")
 	case verifyStepNote:
 		state.Draft[verifyDraftNote] = ""
 		if reply, ok := s.saveVerifyDraft(ctx, &state); !ok {
 			return reply
 		}
-		return s.verifyAdvance(ctx, state, verifyStepConfirm, "No extra comment.")
+		return s.verifyAdvance(ctx, state, verifyStepConfirm, "没有额外备注。")
 	default:
 		return s.verifyStepReminder(state)
 	}
@@ -556,11 +555,11 @@ func (s *Service) skipVerifyStep(ctx context.Context, state domain.BotChatState)
 func (s *Service) handleVerifyDescription(ctx context.Context, state domain.BotChatState, text string) botReply {
 	length := utf8.RuneCountInString(text)
 	if length < domain.MinVerificationDescriptionLength {
-		return botReply{Text: fmt.Sprintf("That is %d characters and I need at least %d. Say what the subject is, who is behind it and what it is publicly known for.",
+		return botReply{Text: fmt.Sprintf("当前 %d 个字符，至少需要 %d 个。请说明申请对象是什么、由谁运营、因何而知名。",
 			length, domain.MinVerificationDescriptionLength)}
 	}
 	if length > domain.MaxVerificationDescriptionLength {
-		return botReply{Text: fmt.Sprintf("That is %d characters and the limit is %d. Please shorten it.",
+		return botReply{Text: fmt.Sprintf("当前 %d 个字符，上限为 %d 个。请精简。",
 			length, domain.MaxVerificationDescriptionLength)}
 	}
 	verifyEnsureDraft(&state)
@@ -568,7 +567,7 @@ func (s *Service) handleVerifyDescription(ctx context.Context, state domain.BotC
 	if reply, ok := s.saveVerifyDraft(ctx, &state); !ok {
 		return reply
 	}
-	return s.verifyAdvance(ctx, state, verifyStepWebsite, "Description saved.")
+	return s.verifyAdvance(ctx, state, verifyStepWebsite, "描述已保存。")
 }
 
 func (s *Service) handleVerifyWebsite(ctx context.Context, state domain.BotChatState, text string) botReply {
@@ -580,7 +579,7 @@ func (s *Service) handleVerifyWebsite(ctx context.Context, state domain.BotChatS
 	if reply, ok := s.saveVerifyDraft(ctx, &state); !ok {
 		return reply
 	}
-	return s.verifyAdvance(ctx, state, verifyStepSocial, "Website saved.")
+	return s.verifyAdvance(ctx, state, verifyStepSocial, "官方网站已保存。")
 }
 
 func (s *Service) handleVerifySocial(ctx context.Context, state domain.BotChatState, text string) botReply {
@@ -589,7 +588,7 @@ func (s *Service) handleVerifySocial(ctx context.Context, state domain.BotChatSt
 	}
 	links := verifySplitLinks(text)
 	if len(links) > domain.MaxVerificationSocialLinks {
-		return botReply{Text: fmt.Sprintf("That is %d links and I can keep at most %d. Please send the most important ones.",
+		return botReply{Text: fmt.Sprintf("共 %d 个链接，最多保留 %d 个。请发送最重要的几个。",
 			len(links), domain.MaxVerificationSocialLinks)}
 	}
 	if reply, ok := verifyCheckLinks(links); !ok {
@@ -600,17 +599,17 @@ func (s *Service) handleVerifySocial(ctx context.Context, state domain.BotChatSt
 	if reply, ok := s.saveVerifyDraft(ctx, &state); !ok {
 		return reply
 	}
-	return s.verifyAdvance(ctx, state, verifyStepPress, fmt.Sprintf("Saved %d social link(s).", len(links)))
+	return s.verifyAdvance(ctx, state, verifyStepPress, fmt.Sprintf("已保存 %d 个社交链接。", len(links)))
 }
 
 func (s *Service) handleVerifyPress(ctx context.Context, state domain.BotChatState, text string) botReply {
 	links := verifySplitLinks(text)
 	if len(links) < domain.MinVerificationPressLinks {
-		return botReply{Text: fmt.Sprintf("I counted %d link(s) and the official bar is at least %d, from outlets you do not control. Send them in one message, one per line.",
+		return botReply{Text: fmt.Sprintf("我只数到 %d 个链接，官方要求至少 %d 个，且来自你无法控制的媒体。请用一条消息发送，每行一个。",
 			len(links), domain.MinVerificationPressLinks)}
 	}
 	if len(links) > domain.MaxVerificationPressLinks {
-		return botReply{Text: fmt.Sprintf("That is %d links and I can keep at most %d. Please send the strongest ones.",
+		return botReply{Text: fmt.Sprintf("共 %d 个链接，最多保留 %d 个。请发送最有说服力的几个。",
 			len(links), domain.MaxVerificationPressLinks)}
 	}
 	if reply, ok := verifyCheckLinks(links); !ok {
@@ -621,7 +620,7 @@ func (s *Service) handleVerifyPress(ctx context.Context, state domain.BotChatSta
 	if reply, ok := s.saveVerifyDraft(ctx, &state); !ok {
 		return reply
 	}
-	return s.verifyAdvance(ctx, state, verifyStepNote, fmt.Sprintf("Saved %d press link(s).", len(links)))
+	return s.verifyAdvance(ctx, state, verifyStepNote, fmt.Sprintf("已保存 %d 个媒体链接。", len(links)))
 }
 
 func (s *Service) handleVerifyNote(ctx context.Context, state domain.BotChatState, text string) botReply {
@@ -629,7 +628,7 @@ func (s *Service) handleVerifyNote(ctx context.Context, state domain.BotChatStat
 		return s.skipVerifyStep(ctx, state)
 	}
 	if utf8.RuneCountInString(text) > domain.MaxVerificationCommentLength {
-		return botReply{Text: fmt.Sprintf("That comment is %d characters and the limit is %d. Please shorten it.",
+		return botReply{Text: fmt.Sprintf("备注当前 %d 个字符，上限为 %d 个。请精简。",
 			utf8.RuneCountInString(text), domain.MaxVerificationCommentLength)}
 	}
 	verifyEnsureDraft(&state)
@@ -637,7 +636,7 @@ func (s *Service) handleVerifyNote(ctx context.Context, state domain.BotChatStat
 	if reply, ok := s.saveVerifyDraft(ctx, &state); !ok {
 		return reply
 	}
-	return s.verifyAdvance(ctx, state, verifyStepConfirm, "Comment saved.")
+	return s.verifyAdvance(ctx, state, verifyStepConfirm, "备注已保存。")
 }
 
 // submitVerifyApplication files the draft.
@@ -660,7 +659,7 @@ func (s *Service) submitVerifyApplication(ctx context.Context, state domain.BotC
 		}
 		// It has moved on since it was filed (decided, or withdrawn from elsewhere):
 		// report where it stands instead of repeating a stale confirmation.
-		return botReply{Text: fmt.Sprintf("Application #%d for %s: %s. Send /status for the full list.",
+		return botReply{Text: fmt.Sprintf("申请 #%d（对象：%s）：%s。发送 /status 查看完整列表。",
 			app.ID, verifyTargetLabel(app.TargetTitle, app.TargetUsername), verifyStatusLabel(app.Status))}
 	}
 	input := verifyDraftInput(state)
@@ -717,7 +716,7 @@ func (s *Service) cancelVerifyApplication(ctx context.Context, userID int64, sta
 	if err != nil {
 		return s.verifyErrorReply(userID, "cancel application", err)
 	}
-	return botReply{Text: fmt.Sprintf("Application #%d for %s is withdrawn. Send /new when you want to file another one.",
+	return botReply{Text: fmt.Sprintf("申请 #%d（对象：%s）已撤回。需要时发送 /new 再次提交。",
 		cancelled.ID, verifyTargetLabel(cancelled.TargetTitle, cancelled.TargetUsername))}
 }
 
@@ -758,30 +757,30 @@ func (s *Service) verifyStatusReply(ctx context.Context, userID int64) botReply 
 		return botReply{Text: verifyNoApplicationsText}
 	}
 	var b strings.Builder
-	b.WriteString("Your verification applications:")
+	b.WriteString("你的认证申请：")
 	for _, app := range apps {
 		b.WriteString("\n\n#")
 		b.WriteString(strconv.FormatInt(app.ID, 10))
 		b.WriteString(" - ")
 		b.WriteString(verifyTargetLabel(app.TargetTitle, app.TargetUsername))
-		b.WriteString("\nStatus: ")
+		b.WriteString("\n状态：")
 		b.WriteString(verifyStatusLabel(app.Status))
 		if date := verifyDateLabel(app); date != "" {
-			b.WriteString(" (")
+			b.WriteString("（")
 			b.WriteString(date)
-			b.WriteString(")")
+			b.WriteString("）")
 		}
 		// Only DecisionReason is ever shown: it is the reason written to be read by
 		// the applicant. app.InternalNote is the reviewers' private note and must
 		// never appear in a bot message.
 		if app.Status == domain.VerificationStatusRejected {
 			if reason := strings.TrimSpace(app.DecisionReason); reason != "" {
-				b.WriteString("\nReason: ")
+				b.WriteString("\n原因：")
 				b.WriteString(reason)
 			}
 		}
 	}
-	b.WriteString("\n\nSend /new to file another application.")
+	b.WriteString("\n\n发送 /new 提交另一份申请。")
 	return botReply{Text: b.String()}
 }
 
@@ -858,7 +857,7 @@ func (s *Service) verifyTargetPrompt(ctx context.Context, state domain.BotChatSt
 				continue
 			}
 			rows = append(rows, []verifyOption{{
-				text:   label + " (unavailable)",
+				text:   label + "（不可申请）",
 				choice: verifyChoiceBlockedPrefix + target.Reason,
 			}})
 		}
@@ -938,24 +937,24 @@ func verifyNoticeText(app domain.VerificationApplication, kind string) (string, 
 	target := verifyTargetLabel(app.TargetTitle, app.TargetUsername)
 	switch kind {
 	case verificationapp.NoticeKindSubmitted:
-		return fmt.Sprintf("Application #%d for %s is in the review queue. I will message you here as soon as it is decided.",
+		return fmt.Sprintf("申请 #%d（对象：%s）已进入审核队列。有结果后我会在这里通知你。",
 			app.ID, target), true
 	case verificationapp.NoticeKindApproved:
-		return fmt.Sprintf("Application #%d is approved: %s is now officially verified and carries the badge. Thank you for the paperwork.",
+		return fmt.Sprintf("申请 #%d 已批准：%s 现已获得官方认证，并显示认证徽章。感谢配合。",
 			app.ID, target), true
 	case verificationapp.NoticeKindRejected:
-		text := fmt.Sprintf("Application #%d for %s was not approved.", app.ID, target)
+		text := fmt.Sprintf("申请 #%d（对象：%s）未通过。", app.ID, target)
 		if reason := strings.TrimSpace(app.DecisionReason); reason != "" {
-			text += "\n\nReason: " + reason
+			text += "\n\n原因：" + reason
 		}
-		return text + "\n\nYou can file again later with /new once the reason no longer applies.", true
+		return text + "\n\n原因不再存在后，你可以用 /new 重新提交。", true
 	case verificationapp.NoticeKindCancelled:
-		return fmt.Sprintf("Application #%d for %s is withdrawn. Send /new whenever you want to file it again.",
+		return fmt.Sprintf("申请 #%d（对象：%s）已撤回。需要时可随时发送 /new 重新提交。",
 			app.ID, target), true
 	case verificationapp.NoticeKindRevoked:
-		text := fmt.Sprintf("The official verification of %s has been revoked, and the badge is no longer shown.", target)
+		text := fmt.Sprintf("%s 的官方认证已被撤销，徽章不再显示。", target)
 		if reason := strings.TrimSpace(app.DecisionReason); reason != "" {
-			text += "\n\nReason: " + reason
+			text += "\n\n原因：" + reason
 		}
 		return text, true
 	default:
@@ -1247,37 +1246,37 @@ func verifyDraftInt(state domain.BotChatState, key string) int64 {
 func verifySummaryText(state domain.BotChatState) string {
 	input := verifyDraftInput(state)
 	var b strings.Builder
-	b.WriteString("Here is your application. Nothing reaches the reviewers until you tap ")
+	b.WriteString("以下是你的申请。在你点击“")
 	b.WriteString(verifySubmitButtonText)
-	b.WriteString(".\n\nSubject: ")
+	b.WriteString("”之前，内容不会送达审核员。\n\n对象：")
 	b.WriteString(verifyTargetLabel(state.Draft[verifyDraftTargetTitle], state.Draft[verifyDraftTargetUsername]))
-	b.WriteString("\nCategory: ")
+	b.WriteString("\n分类：")
 	b.WriteString(verifyCategoryLabel(input.Category))
-	b.WriteString("\nWebsite: ")
+	b.WriteString("\n网站：")
 	b.WriteString(input.OfficialWebsite)
-	b.WriteString("\n\nDescription:\n")
+	b.WriteString("\n\n描述：\n")
 	b.WriteString(input.Description)
-	b.WriteString("\n\nPress coverage:")
+	b.WriteString("\n\n媒体报道：")
 	for _, link := range input.PressLinks {
 		b.WriteString("\n- ")
 		b.WriteString(link)
 	}
 	if len(input.SocialLinks) > 0 {
-		b.WriteString("\n\nSocial links:")
+		b.WriteString("\n\n社交链接：")
 		for _, link := range input.SocialLinks {
 			b.WriteString("\n- ")
 			b.WriteString(link)
 		}
 	}
 	if input.AdditionalNote != "" {
-		b.WriteString("\n\nComment:\n")
+		b.WriteString("\n\n备注：\n")
 		b.WriteString(input.AdditionalNote)
 	}
 	return b.String()
 }
 
 func verifySubmittedText(app domain.VerificationApplication) string {
-	return fmt.Sprintf("Application #%d is filed for %s.\n\nA reviewer reads it by hand, and I message you here with the decision. Send /status any time to see where it stands, or /cancel to withdraw it while it is still open.",
+	return fmt.Sprintf("申请 #%d（对象：%s）已提交。\n\n审核员会人工阅读，结果我会在这里通知你。随时发送 /status 查看进度，或在申请仍未处理时发送 /cancel 撤回。",
 		app.ID, verifyTargetLabel(app.TargetTitle, app.TargetUsername))
 }
 
@@ -1294,7 +1293,7 @@ func verifyTargetLabel(title, username string) string {
 	case title != "":
 		return title
 	default:
-		return "the selected subject"
+		return "所选对象"
 	}
 }
 
@@ -1314,15 +1313,15 @@ func verifyTargetButtonText(target domain.VerificationTarget) string {
 func verifyTargetKindLabel(kind domain.VerificationTargetType) string {
 	switch kind {
 	case domain.VerificationTargetBot:
-		return "Bot"
+		return "机器人"
 	case domain.VerificationTargetChannel:
-		return "Channel"
+		return "频道"
 	case domain.VerificationTargetSupergroup:
-		return "Group"
+		return "群组"
 	case domain.VerificationTargetUser:
-		return "Account"
+		return "账号"
 	default:
-		return "Subject"
+		return "对象"
 	}
 }
 
@@ -1332,7 +1331,7 @@ func verifyCategoryLabel(category string) string {
 		return label
 	}
 	if category == "" {
-		return "not chosen yet"
+		return "尚未选择"
 	}
 	return category
 }
@@ -1340,17 +1339,17 @@ func verifyCategoryLabel(category string) string {
 func verifyStatusLabel(status domain.VerificationStatus) string {
 	switch status {
 	case domain.VerificationStatusDraft:
-		return "draft, not filed yet"
+		return "草稿，尚未提交"
 	case domain.VerificationStatusSubmitted:
-		return "waiting for a reviewer"
+		return "等待审核"
 	case domain.VerificationStatusInReview:
-		return "being reviewed"
+		return "审核中"
 	case domain.VerificationStatusApproved:
-		return "approved, the badge is live"
+		return "已批准，徽章已生效"
 	case domain.VerificationStatusRejected:
-		return "not approved"
+		return "未通过"
 	case domain.VerificationStatusCancelled:
-		return "withdrawn"
+		return "已撤回"
 	default:
 		return string(status)
 	}
@@ -1359,11 +1358,11 @@ func verifyStatusLabel(status domain.VerificationStatus) string {
 func verifyDateLabel(app domain.VerificationApplication) string {
 	switch {
 	case !app.ReviewedAt.IsZero():
-		return "decided " + app.ReviewedAt.UTC().Format("2006-01-02")
+		return "审核于 " + app.ReviewedAt.UTC().Format("2006-01-02")
 	case !app.SubmittedAt.IsZero():
-		return "filed " + app.SubmittedAt.UTC().Format("2006-01-02")
+		return "提交于 " + app.SubmittedAt.UTC().Format("2006-01-02")
 	case !app.CreatedAt.IsZero():
-		return "started " + app.CreatedAt.UTC().Format("2006-01-02")
+		return "创建于 " + app.CreatedAt.UTC().Format("2006-01-02")
 	default:
 		return ""
 	}
@@ -1389,7 +1388,7 @@ func verifySplitLinks(text string) []string {
 func verifyCheckLinks(links []string) (botReply, bool) {
 	for _, link := range links {
 		if err := domain.ValidateVerificationURL(link); err != nil {
-			return botReply{Text: verifyURLRejectText + "\n\nI could not accept: " + verifyTruncate(link, 120)}, false
+			return botReply{Text: verifyURLRejectText + "\n\n无法接受：" + verifyTruncate(link, 120)}, false
 		}
 	}
 	return botReply{}, true
@@ -1397,7 +1396,7 @@ func verifyCheckLinks(links []string) (botReply, bool) {
 
 func verifyIsSkipText(text string) bool {
 	switch strings.ToLower(strings.TrimSpace(text)) {
-	case "skip", "-", "none", "no":
+	case "skip", "-", "none", "no", "跳过", "无", "没有":
 		return true
 	default:
 		return false
@@ -1434,33 +1433,33 @@ func verifyPolicyText(err error) (string, bool) {
 	case errors.Is(err, verificationapp.ErrDisabled):
 		return verifyUnavailableText, true
 	case errors.Is(err, domain.ErrVerificationTargetAlreadyVerified):
-		return "That one is already verified, so there is nothing to apply for.", true
+		return "该对象已通过认证，无需再申请。", true
 	case errors.Is(err, domain.ErrVerificationTargetNotPublic):
-		return "That one has no public @username. Official verification only covers a public presence, so set a username first.", true
+		return "该对象没有公开的 @username。官方认证只覆盖公开存在，请先设置用户名。", true
 	case errors.Is(err, domain.ErrVerificationTargetRestricted):
-		return "That one carries a restriction, so it cannot be verified while the restriction stands.", true
+		return "该对象带有受限状态，在限制解除前无法认证。", true
 	case errors.Is(err, domain.ErrVerificationTargetSystem):
-		return "That is a built-in service account and cannot be filed.", true
+		return "这是内置服务账号，无法申请。", true
 	case errors.Is(err, domain.ErrVerificationNotOwner):
-		return "You are not the creator or an administrator of that one, so you cannot file it.", true
+		return "你不是该对象的创建者或管理员，无法提交申请。", true
 	case errors.Is(err, domain.ErrVerificationApplicationExists):
-		return "There is already an active application for that one. Send /status to see it.", true
+		return "该对象已有一份进行中的申请。发送 /status 查看。", true
 	case errors.Is(err, domain.ErrVerificationCooldown):
-		return "That one was reviewed recently. A rejected application can only be filed again after the cooldown has passed.", true
+		return "该对象最近刚被审核过。被拒绝的申请需等待冷却期结束后才能再次提交。", true
 	case errors.Is(err, domain.ErrVerificationRateLimited):
-		return "You have reached the limit on open applications. Finish or cancel one before filing another.", true
+		return "你已达到进行中申请的数量上限。请先完成或取消一份，再提交新的。", true
 	case errors.Is(err, domain.ErrVerificationUserTargetsDisabled):
-		return "Plain user accounts are not accepted for verification on this server.", true
+		return "此服务器不接受普通用户账号的认证申请。", true
 	case errors.Is(err, domain.ErrVerificationApplicationNotFound):
-		return "I cannot find that application any more. Send /new to start a fresh one.", true
+		return "我找不到这份申请了。发送 /new 重新开始。", true
 	case errors.Is(err, domain.ErrVerificationStatusInvalid):
-		return "That application has already been decided, so it cannot be changed. Send /status to see it.", true
+		return "该申请已有结果，无法再修改。发送 /status 查看。", true
 	case errors.Is(err, domain.ErrVerificationVersionConflict):
-		return "That application just changed somewhere else. Send /status to see where it stands now.", true
+		return "该申请刚刚在别处发生了变化。发送 /status 查看当前状态。", true
 	case errors.Is(err, domain.ErrVerificationURLInvalid):
 		return verifyURLRejectText, true
 	case errors.Is(err, domain.ErrVerificationApplicationInvalid), errors.Is(err, domain.ErrVerificationTargetInvalid):
-		return "I could not accept that. Send /help to see what an application needs.", true
+		return "我无法接受该内容。发送 /help 查看申请所需信息。", true
 	default:
 		return "", false
 	}
@@ -1493,5 +1492,5 @@ func verifyIneligibleText(reason string) string {
 			return text
 		}
 	}
-	return "That one cannot be filed right now."
+	return "该对象目前无法提交申请。"
 }

@@ -24,13 +24,13 @@ func decodePasskeyID(vals ...string) ([]byte, bool) {
 	return nil, false
 }
 
-func passkeyPublicKeyCredential(cred tg.InputPasskeyCredentialClass) (*tg.InputPasskeyCredentialPublicKey, bool) {
-	pk, ok := cred.(*tg.InputPasskeyCredentialPublicKey)
-	return pk, ok
+func passkeyPublicKeyCredential(cred tg.InputPasskeyCredentialPublicKey) (*tg.InputPasskeyCredentialPublicKey, bool) {
+	pk := cred
+	return &pk, true
 }
 
 // passkeyLoginFromCredential 从 inputPasskeyCredentialPublicKey 提取登录断言字段。
-func passkeyLoginFromCredential(cred tg.InputPasskeyCredentialClass) (credID []byte, login *tg.InputPasskeyResponseLogin, ok bool) {
+func passkeyLoginFromCredential(cred tg.InputPasskeyCredentialPublicKey) (credID []byte, login *tg.InputPasskeyResponseLogin, ok bool) {
 	pk, ok := passkeyPublicKeyCredential(cred)
 	if !ok {
 		return nil, nil, false
@@ -47,7 +47,7 @@ func passkeyLoginFromCredential(cred tg.InputPasskeyCredentialClass) (credID []b
 }
 
 // passkeyRegisterFromCredential 从 inputPasskeyCredentialPublicKey 提取注册 attestation 字段。
-func passkeyRegisterFromCredential(cred tg.InputPasskeyCredentialClass) (credID []byte, reg *tg.InputPasskeyResponseRegister, ok bool) {
+func passkeyRegisterFromCredential(cred tg.InputPasskeyCredentialPublicKey) (credID []byte, reg *tg.InputPasskeyResponseRegister, ok bool) {
 	pk, ok := passkeyPublicKeyCredential(cred)
 	if !ok {
 		return nil, nil, false

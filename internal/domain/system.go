@@ -226,11 +226,16 @@ func OfficialSystemUser() User {
 // only the default snapshot; startup reconciliation and the memory backend use
 // these helpers so custom deployments do not expose stale "telesrv" text.
 func ChatBotDescription() string {
-	return "Chat with the configured " + branding.ProductName() + " AI provider."
+	return "与已配置的 AI 助手聊天，直接发送消息即可。"
 }
 
 func StickersBotDescription() string {
 	return "Create custom sticker and emoji packs for " + branding.ProductName() + "."
+}
+
+// VerifyBotDescription is the built-in @verifybot's about/description copy.
+func VerifyBotDescription() string {
+	return "申请频道、超级群组或机器人的官方认证。我会收集申请并把审核结果通知你。"
 }
 
 // BotFatherUser 返回内置 BotFather 账号。username 不以 bot 结尾属种子例外（与官方一致）。
@@ -298,8 +303,9 @@ func VerifyBotUser() User {
 	u := User{
 		ID:             VerifyBotUserID,
 		AccessHash:     VerifyBotAccessHash,
-		FirstName:      "Verify Bot",
+		FirstName:      "验证机器人",
 		Username:       "verifybot",
+		About:          VerifyBotDescription(),
 		Verified:       true,
 		Bot:            true,
 		BotInfoVersion: 1,

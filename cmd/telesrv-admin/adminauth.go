@@ -32,9 +32,9 @@ const dummyBcryptHash = "$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL1
 //
 // A database account may not take this name: authenticateLogin resolves it to
 // the environment credential before ever consulting the table, so a row called
-// "owpengram" would be shadowed -- and a name that silently does nothing is a
+// "admin" would be shadowed -- and a name that silently does nothing is a
 // trap. createAdminConsoleUser rejects it outright.
-const breakGlassUsername = "owpengram"
+const breakGlassUsername = "admin"
 
 // loginIdentity is who a successful login turns out to be.
 type loginIdentity struct {

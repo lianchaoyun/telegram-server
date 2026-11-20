@@ -6,14 +6,16 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
 const maxResolveQueryLength = 256
 
 type Handler struct {
-	store *Store
-	mux   *http.ServeMux
+	store  *Store
+	mux    *http.ServeMux
+	appDir string
 }
 
 func NewHandler(store *Store) (*Handler, error) {
@@ -29,6 +31,17 @@ func NewHandler(store *Store) (*Handler, error) {
 		h.mux.HandleFunc(endpoint, h.current)
 	}
 	return h, nil
+}
+
+// SetAppDir publishes mobile application packages (for example APKs) under
+// /apk/<name>. Entries in apps.*.url may point at these files when the operator
+// prefers to host releases on this service instead of an external URL.
+func (h *Handler) SetAppDir(dir string) {
+	if strings.TrimSpace(dir) == "" {
+		return
+	}
+	h.appDir = dir
+	h.mux.HandleFunc("/apk/", h.appFile)
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -169,6 +182,32 @@ func (h *Handler) file(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("ETag", etag)
 	w.Header().Set("Accept-Ranges", "bytes")
 	http.ServeContent(w, r, record.name, record.modTime, f)
+}
+
+func (h *Handler) appFile(w http.ResponseWriter, r *http.Request) {
+	if !allowReadMethod(w, r) {
+		return
+	}
+	name := strings.TrimPrefix(r.URL.Path, "/apk/")
+	if name == "" || path.Base(name) != name || strings.ContainsAny(name, `/\\`) {
+		http.NotFound(w, r)
+		return
+	}
+	f, err := os.Open(filepath.Join(h.appDir, name))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/vnd.android.package-archive")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name))
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	http.ServeContent(w, r, name, info.ModTime(), f)
 }
 
 func allowReadMethod(w http.ResponseWriter, r *http.Request) bool {

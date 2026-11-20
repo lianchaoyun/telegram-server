@@ -30,10 +30,12 @@ func run() error {
 	listenDefault := envOr("TELESRV_UPDATE_LISTEN", "127.0.0.1:2402")
 	manifestDefault := envOr("TELESRV_UPDATE_MANIFEST", "data/updates/manifest.json")
 	filesDefault := envOr("TELESRV_UPDATE_FILES_DIR", "data/updates/files")
+	apkDefault := envOr("TELESRV_UPDATE_APK_DIR", "data/updates/apk")
 
 	listenAddr := flag.String("listen", listenDefault, "HTTP listen address")
 	manifestPath := flag.String("manifest", manifestDefault, "release manifest path")
 	filesDir := flag.String("files", filesDefault, "desktop update package directory")
+	apkDir := flag.String("apk", apkDefault, "mobile application package directory served under /apk/")
 	check := flag.Bool("check", false, "validate the catalog and exit")
 	flag.Parse()
 
@@ -49,6 +51,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	handler.SetAppDir(*apkDir)
 	listener, err := net.Listen("tcp", *listenAddr)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", *listenAddr, err)
@@ -76,7 +79,8 @@ func run() error {
 	logger.Info("update service started",
 		zap.String("listen", listener.Addr().String()),
 		zap.String("manifest", *manifestPath),
-		zap.String("files", *filesDir))
+		zap.String("files", *filesDir),
+		zap.String("apk", *apkDir))
 
 	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

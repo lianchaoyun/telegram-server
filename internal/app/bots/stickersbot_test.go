@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"telesrv/internal/domain"
 	"telesrv/internal/store/memory"
@@ -471,14 +472,44 @@ func assertReplyEntityText(t *testing.T, msg domain.Message, typ domain.MessageE
 		if entity.Type != typ {
 			continue
 		}
-		if entity.Offset < 0 || entity.Length < 0 || entity.Offset+entity.Length > len(msg.Body) {
-			t.Fatalf("entity %+v out of ASCII bounds for %q", entity, msg.Body)
-		}
-		if got := msg.Body[entity.Offset : entity.Offset+entity.Length]; got == want {
+		if got, ok := replyEntityText(msg.Body, entity.Offset, entity.Length); ok && got == want {
 			return
 		}
 	}
 	t.Fatalf("message %q entities %+v missing %s entity for %q", msg.Body, msg.Entities, typ, want)
+}
+
+// replyEntityText resolves a Telegram entity range (UTF-16 units) back to the
+// substring of the UTF-8 body it covers.
+func replyEntityText(body string, offset, length int) (string, bool) {
+	if offset < 0 || length < 0 {
+		return "", false
+	}
+	startByte, endByte := -1, -1
+	units := 0
+	for i, r := range body {
+		if units == offset && startByte < 0 {
+			startByte = i
+		}
+		units += utf16RuneLen(r)
+		if units == offset+length {
+			endByte = i + utf8.RuneLen(r)
+			break
+		}
+		if units > offset+length {
+			break
+		}
+	}
+	if offset == 0 && startByte < 0 {
+		startByte = 0
+	}
+	if startByte >= 0 && endByte < 0 && units == offset+length {
+		endByte = len(body)
+	}
+	if startByte < 0 || endByte < startByte {
+		return "", false
+	}
+	return body[startByte:endByte], true
 }
 
 type stickersBotFakeCreator struct {

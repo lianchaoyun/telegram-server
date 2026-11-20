@@ -560,7 +560,7 @@ func (r *Router) onBotsSetCustomVerification(ctx context.Context, req *tg.BotsSe
 		CallerUserID:  userID,
 	}
 	if description, ok := req.GetCustomDescription(); ok {
-		setRequest.CustomDescription = description
+		setRequest.CustomDescription = description.Text
 	}
 	// Shape-only validation at the edge (peer kind, description length, revoke that
 	// still carries a description) so a malformed request gets a deterministic TL

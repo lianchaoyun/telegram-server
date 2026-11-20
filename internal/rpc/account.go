@@ -870,7 +870,7 @@ func (r *Router) onAccountInitPasskeyRegistration(ctx context.Context) (*tg.Acco
 }
 
 // onAccountRegisterPasskey 验证注册 attestation 并持久化凭据。
-func (r *Router) onAccountRegisterPasskey(ctx context.Context, credential tg.InputPasskeyCredentialClass) (*tg.Passkey, error) {
+func (r *Router) onAccountRegisterPasskey(ctx context.Context, credential tg.InputPasskeyCredentialPublicKey) (*tg.Passkey, error) {
 	if r.deps.Passkey == nil {
 		return nil, internalErr()
 	}

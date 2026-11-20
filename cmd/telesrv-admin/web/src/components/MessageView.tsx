@@ -130,15 +130,15 @@ export function MessageView({
     <section className="message-view">
       <div className="message-view-head">
         <div>
-          <strong>{sender}</strong>
-          <small>{meta}</small>
+          <strong data-no-i18n>{sender}</strong>
+          <small data-no-i18n>{meta}</small>
         </div>
         {badges && <div className="entity-badges">{badges}</div>}
       </div>
 
       <div className="message-bubble">
         {text
-          ? <p className="message-text">{text}</p>
+          ? <p className="message-text" data-no-i18n>{text}</p>
           : <p className="message-text empty">{described ? "No caption" : "No text"}</p>}
 
         {described && Icon && (

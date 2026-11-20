@@ -351,19 +351,19 @@ func runVerifyApplication(t *testing.T, svc *Service, messages *memory.MessageSt
 	pressVerifyButton(t, svc, userID, picker, "@examplenews")
 	categories := latestVerifyReply(t, messages, userID)
 
-	pressVerifyButton(t, svc, userID, categories, "Media outlet")
-	if got := latestVerifyReply(t, messages, userID); !strings.Contains(got.Body, "describe the subject") {
+	pressVerifyButton(t, svc, userID, categories, "媒体机构")
+	if got := latestVerifyReply(t, messages, userID); !strings.Contains(got.Body, "描述申请对象") {
 		t.Fatalf("after category, reply = %q", got.Body)
 	}
 
 	sendToVerifyBot(t, svc, messages, userID, verifyTestDescription)
 	social := sendToVerifyBot(t, svc, messages, userID, verifyTestWebsite)
-	if !strings.Contains(social.Body, "social media") {
+	if !strings.Contains(social.Body, "社交媒体") {
 		t.Fatalf("after website, reply = %q", social.Body)
 	}
 
 	pressVerifyButton(t, svc, userID, social, verifySkipButtonText)
-	if got := latestVerifyReply(t, messages, userID); !strings.Contains(got.Body, "press coverage") {
+	if got := latestVerifyReply(t, messages, userID); !strings.Contains(got.Body, "媒体报道") {
 		t.Fatalf("after skipping social links, reply = %q", got.Body)
 	}
 
@@ -385,7 +385,7 @@ func TestVerifyBotStartExplainsAndOffersApplyButton(t *testing.T) {
 		t.Fatal("service should handle @verifybot")
 	}
 	reply := sendToVerifyBot(t, svc, messages, owner.ID, "/start")
-	for _, want := range []string{"official", "public @username", "/new", "/help"} {
+	for _, want := range []string{"官方", "公开 @username", "/new", "/help"} {
 		if !strings.Contains(reply.Body, want) {
 			t.Fatalf("/start reply missing %q: %q", want, reply.Body)
 		}
@@ -408,7 +408,7 @@ func TestVerifyBotFullApplicationFlowFilesExactlyOneApplication(t *testing.T) {
 	owner := newOwner(t, users, "+7101")
 
 	summary := runVerifyApplication(t, svc, messages, owner.ID)
-	for _, want := range []string{"Example News", "Media outlet", verifyTestWebsite, "press.example.org/story-one", verifySubmitButtonText} {
+	for _, want := range []string{"Example News", "媒体机构", verifyTestWebsite, "press.example.org/story-one", verifySubmitButtonText} {
 		if !strings.Contains(summary.Body, want) {
 			t.Fatalf("summary missing %q: %q", want, summary.Body)
 		}
@@ -547,7 +547,7 @@ func TestVerifyBotForgedCallbackTokenIsRefused(t *testing.T) {
 		[]byte(verifyCallbackDataPrefix),
 	} {
 		answer := pressVerifyCallbackData(t, svc, owner.ID, intro, data)
-		if !answer.Alert || !strings.Contains(answer.Message, "no longer active") {
+		if !answer.Alert || !strings.Contains(answer.Message, "已失效") {
 			t.Fatalf("forged data %q answered %+v, want an explaining alert", data, answer)
 		}
 	}
@@ -596,7 +596,7 @@ func TestVerifyBotPressLinkMinimumIsEnforced(t *testing.T) {
 	intro := sendToVerifyBot(t, svc, messages, owner.ID, "/start")
 	pressVerifyButton(t, svc, owner.ID, intro, verifyApplyButtonText)
 	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "@examplenews")
-	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "Media outlet")
+	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "媒体机构")
 	sendToVerifyBot(t, svc, messages, owner.ID, verifyTestDescription)
 	social := sendToVerifyBot(t, svc, messages, owner.ID, verifyTestWebsite)
 	pressVerifyButton(t, svc, owner.ID, social, verifySkipButtonText)
@@ -610,7 +610,7 @@ func TestVerifyBotPressLinkMinimumIsEnforced(t *testing.T) {
 	}
 
 	accepted := sendToVerifyBot(t, svc, messages, owner.ID, verifyTestPressLinks)
-	if !strings.Contains(accepted.Body, "reviewers should know") {
+	if !strings.Contains(accepted.Body, "需要审核员知道") {
 		t.Fatalf("two press links did not advance the dialog: %q", accepted.Body)
 	}
 	if len(fake.apps[101].PressLinks) != 2 {
@@ -626,7 +626,7 @@ func TestVerifyBotRejectsInvalidLinksWithAReason(t *testing.T) {
 	intro := sendToVerifyBot(t, svc, messages, owner.ID, "/start")
 	pressVerifyButton(t, svc, owner.ID, intro, verifyApplyButtonText)
 	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "@examplenews")
-	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "Media outlet")
+	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "媒体机构")
 	sendToVerifyBot(t, svc, messages, owner.ID, verifyTestDescription)
 
 	// Not a URL, a non-web scheme, and an address the domain refuses as
@@ -634,7 +634,7 @@ func TestVerifyBotRejectsInvalidLinksWithAReason(t *testing.T) {
 	// probe).
 	for _, bad := range []string{"my site", "ftp://example.com", "http://127.0.0.1/admin", "https://localhost/x"} {
 		reply := sendToVerifyBot(t, svc, messages, owner.ID, bad)
-		if !strings.Contains(reply.Body, "http:// or https://") {
+		if !strings.Contains(reply.Body, "http:// 或 https://") {
 			t.Fatalf("website %q answered %q, want the link rules", bad, reply.Body)
 		}
 		if fake.apps[101].OfficialWebsite != "" {
@@ -643,7 +643,7 @@ func TestVerifyBotRejectsInvalidLinksWithAReason(t *testing.T) {
 	}
 	// A short description is refused with the actual bar, not a generic error.
 	shortDesc := sendToVerifyBot(t, svc, messages, owner.ID, verifyTestWebsite)
-	if !strings.Contains(shortDesc.Body, "social media") {
+	if !strings.Contains(shortDesc.Body, "社交媒体") {
 		t.Fatalf("valid website not accepted: %q", shortDesc.Body)
 	}
 }
@@ -656,7 +656,7 @@ func TestVerifyBotDescriptionMinimumIsExplained(t *testing.T) {
 	intro := sendToVerifyBot(t, svc, messages, owner.ID, "/start")
 	pressVerifyButton(t, svc, owner.ID, intro, verifyApplyButtonText)
 	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "@examplenews")
-	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "Media outlet")
+	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "媒体机构")
 
 	reply := sendToVerifyBot(t, svc, messages, owner.ID, "a newsroom")
 	if !strings.Contains(reply.Body, strconv.Itoa(domain.MinVerificationDescriptionLength)) {
@@ -675,7 +675,7 @@ func TestVerifyBotGlobalCommandsWorkMidStep(t *testing.T) {
 	intro := sendToVerifyBot(t, svc, messages, owner.ID, "/start")
 	pressVerifyButton(t, svc, owner.ID, intro, verifyApplyButtonText)
 	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "@examplenews")
-	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "Media outlet")
+	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "媒体机构")
 
 	// /help in the middle of the description step answers help and keeps the step.
 	help := sendToVerifyBot(t, svc, messages, owner.ID, "/help")
@@ -687,7 +687,7 @@ func TestVerifyBotGlobalCommandsWorkMidStep(t *testing.T) {
 		t.Fatalf("/status mid-step = %q", status.Body)
 	}
 	resumed := sendToVerifyBot(t, svc, messages, owner.ID, verifyTestDescription)
-	if !strings.Contains(resumed.Body, "official website") {
+	if !strings.Contains(resumed.Body, "官方网站") {
 		t.Fatalf("description not accepted after global commands: %q", resumed.Body)
 	}
 	if fake.apps[101].Description != verifyTestDescription {
@@ -695,7 +695,7 @@ func TestVerifyBotGlobalCommandsWorkMidStep(t *testing.T) {
 	}
 	// An unknown command is never swallowed as a field value.
 	unknown := sendToVerifyBot(t, svc, messages, owner.ID, "/nope")
-	if !strings.Contains(unknown.Body, "do not know that command") {
+	if !strings.Contains(unknown.Body, "不认识这个命令") {
 		t.Fatalf("unknown command = %q", unknown.Body)
 	}
 	if fake.apps[101].OfficialWebsite != "" {
@@ -755,7 +755,7 @@ func TestVerifyBotCancelWithdrawsTheOpenApplication(t *testing.T) {
 	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "@examplenews")
 
 	cancelled := sendToVerifyBot(t, svc, messages, owner.ID, "/cancel")
-	if !strings.Contains(cancelled.Body, "#101") || !strings.Contains(cancelled.Body, "withdrawn") {
+	if !strings.Contains(cancelled.Body, "#101") || !strings.Contains(cancelled.Body, "已撤回") {
 		t.Fatalf("/cancel = %q", cancelled.Body)
 	}
 	if fake.apps[101].Status != domain.VerificationStatusCancelled {
@@ -779,7 +779,7 @@ func TestVerifyBotCancelButtonWithdrawsFromInsideTheForm(t *testing.T) {
 	categories := latestVerifyReply(t, messages, owner.ID)
 
 	pressVerifyButton(t, svc, owner.ID, categories, verifyCancelButtonText)
-	if reply := latestVerifyReply(t, messages, owner.ID); !strings.Contains(reply.Body, "withdrawn") {
+	if reply := latestVerifyReply(t, messages, owner.ID); !strings.Contains(reply.Body, "已撤回") {
 		t.Fatalf("cancel button = %q", reply.Body)
 	}
 	if fake.apps[101].Status != domain.VerificationStatusCancelled {
@@ -816,11 +816,11 @@ func TestVerifyBotShowsIneligibleTargetsWithTheirReason(t *testing.T) {
 	owner := newOwner(t, users, "+7115")
 
 	picker := sendToVerifyBot(t, svc, messages, owner.ID, "/new")
-	if !strings.Contains(picker.Body, "cannot be filed") && !strings.Contains(picker.Body, verifyNoEligibleText) {
+	if !strings.Contains(picker.Body, "无法提交申请") && !strings.Contains(picker.Body, verifyNoEligibleText) {
 		t.Fatalf("picker with only ineligible candidates = %q", picker.Body)
 	}
-	answer := pressVerifyButton(t, svc, owner.ID, picker, "unavailable")
-	if !answer.Alert || !strings.Contains(answer.Message, "already verified") {
+	answer := pressVerifyButton(t, svc, owner.ID, picker, "不可申请")
+	if !answer.Alert || !strings.Contains(answer.Message, "已通过认证") {
 		t.Fatalf("ineligible button answered %+v, want the reason", answer)
 	}
 	if fake.starts != 0 || len(fake.apps) != 0 {
@@ -836,11 +836,11 @@ func TestVerifyBotNewResumesTheOpenDraft(t *testing.T) {
 	intro := sendToVerifyBot(t, svc, messages, owner.ID, "/start")
 	pressVerifyButton(t, svc, owner.ID, intro, verifyApplyButtonText)
 	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "@examplenews")
-	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "Media outlet")
+	pressVerifyButton(t, svc, owner.ID, latestVerifyReply(t, messages, owner.ID), "媒体机构")
 	sendToVerifyBot(t, svc, messages, owner.ID, verifyTestDescription)
 
 	resumed := sendToVerifyBot(t, svc, messages, owner.ID, "/new")
-	if !strings.Contains(resumed.Body, "#101") || !strings.Contains(resumed.Body, "official website") {
+	if !strings.Contains(resumed.Body, "#101") || !strings.Contains(resumed.Body, "官方网站") {
 		t.Fatalf("/new mid-draft = %q, want a resume at the website step", resumed.Body)
 	}
 	if len(fake.apps) != 1 {
@@ -897,7 +897,7 @@ func TestVerifyBotSendVerificationNoticeNeverLeaksInternalNote(t *testing.T) {
 		t.Fatalf("approved notice: %v", err)
 	}
 	approved := latestVerifyReply(t, messages, owner.ID)
-	for _, want := range []string{"#4242", "Example News", "@examplenews", "approved"} {
+	for _, want := range []string{"#4242", "Example News", "@examplenews", "已批准"} {
 		if !strings.Contains(approved.Body, want) {
 			t.Fatalf("approved notice missing %q: %q", want, approved.Body)
 		}
@@ -921,7 +921,7 @@ func TestVerifyBotSendVerificationNoticeNeverLeaksInternalNote(t *testing.T) {
 		t.Fatalf("revoked notice: %v", err)
 	}
 	revoked := latestVerifyReply(t, messages, owner.ID)
-	if !strings.Contains(revoked.Body, "revoked") || strings.Contains(revoked.Body, "repeat filer") {
+	if !strings.Contains(revoked.Body, "撤销") || strings.Contains(revoked.Body, "repeat filer") {
 		t.Fatalf("revoked notice = %q", revoked.Body)
 	}
 
@@ -954,7 +954,7 @@ func TestVerifyBotSubmitBouncesAnIncompleteApplication(t *testing.T) {
 
 	pressVerifyButton(t, svc, owner.ID, summary, verifySubmitButtonText)
 	bounced := latestVerifyReply(t, messages, owner.ID)
-	if !strings.Contains(bounced.Body, "press coverage") {
+	if !strings.Contains(bounced.Body, "媒体报道") {
 		t.Fatalf("incomplete submit = %q, want the press step", bounced.Body)
 	}
 	if fake.submits != 0 {
@@ -970,7 +970,7 @@ func TestVerifyBotPolicyRefusalsAreExplained(t *testing.T) {
 
 	picker := sendToVerifyBot(t, svc, messages, owner.ID, "/new")
 	pressVerifyButton(t, svc, owner.ID, picker, "@examplenews")
-	if reply := latestVerifyReply(t, messages, owner.ID); !strings.Contains(reply.Body, "limit on open applications") {
+	if reply := latestVerifyReply(t, messages, owner.ID); !strings.Contains(reply.Body, "数量上限") {
 		t.Fatalf("rate-limited StartDraft = %q", reply.Body)
 	}
 

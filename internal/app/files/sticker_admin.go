@@ -116,7 +116,8 @@ func (s *Service) ValidateAdminCreateStickerSet(ctx context.Context, title, shor
 	if err := validateStickerSetTitle(strings.TrimSpace(title)); err != nil {
 		return err
 	}
-	if kind != domain.StickerSetKindEmoji && kind != domain.StickerSetKindMasks && kind != "" {
+	if kind != domain.StickerSetKindEmoji && kind != domain.StickerSetKindMasks &&
+		kind != domain.StickerSetKindStickers && kind != "" {
 		return domain.ErrStickerSetTypeInvalid
 	}
 	normalizedShortName := normalizeStickerSetShortName(shortName)

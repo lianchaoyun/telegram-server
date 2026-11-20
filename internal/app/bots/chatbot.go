@@ -19,8 +19,8 @@ const (
 	chatBotStreamMaxDrafts       = 24
 	chatBotHistoryLimit          = 12
 	chatBotTranscriptLineLimit   = 800
-	chatBotHelpPrefix            = "Send me a message and I will answer with the configured "
-	chatBotHelpSuffix            = " AI provider.\n\n/help - show this message\n/reset - clear the local AI context"
+	chatBotHelpPrefix            = "发送消息给我，我会通过 "
+	chatBotHelpSuffix            = " 配置的 AI 服务回答。\n\n/help - 显示本说明\n/reset - 清除本地 AI 上下文"
 )
 
 func chatBotHelpText() string {
@@ -32,10 +32,10 @@ func chatBotInstruction() string {
 }
 
 const (
-	chatBotUnavailableText = "AI chat is not available right now. Please try again later."
-	chatBotTextOnlyText    = "Send me a text message and I will reply."
-	chatBotResetText       = "Done. I cleared the local AI context for this chat."
-	chatBotUnknownCommand  = "Unknown command. Send /help for available commands."
+	chatBotUnavailableText = "AI 聊天当前不可用，请稍后再试。"
+	chatBotTextOnlyText    = "请发送文字消息，我会回复。"
+	chatBotResetText       = "已完成，本聊天的本地 AI 上下文已清除。"
+	chatBotUnknownCommand  = "未知命令。发送 /help 查看可用命令。"
 )
 
 func (s *Service) respondAsChatBot(userID int64, msg domain.Message) {

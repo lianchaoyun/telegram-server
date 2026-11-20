@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en" translate="no">
+<html lang="zh-CN" translate="no">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/logo.png" />
-    <title>OwpenGram Admin</title>
+    <title>OwpenGram 管理后台</title>
     <script>
       (function () {
         try {
@@ -19,6 +19,14 @@
           document.documentElement.style.colorScheme = theme;
         } catch (e) {
           document.documentElement.setAttribute("data-theme", "light");
+        }
+        try {
+          if (localStorage.getItem("owpengram.admin.language") === "en") {
+            document.documentElement.lang = "en";
+            document.title = "OwpenGram Admin";
+          }
+        } catch (e) {
+          // Language persistence is optional.
         }
       })();
     </script>
