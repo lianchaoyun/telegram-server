@@ -51,6 +51,18 @@ func (r *Router) registerPayments(d *tlprofile.Dispatcher) {
 	registerRPC[*tg.PaymentsGetStarsRevenueStatsRequest](d, tlprofile.SemanticMethodPaymentsGetStarsRevenueStats, func(ctx context.Context, req *tg.PaymentsGetStarsRevenueStatsRequest) (any, error) {
 		return r.onPaymentsGetStarsRevenueStats(ctx, req)
 	})
+	// TDesktop 会周期性拉取“我参与竞拍的礼物”，未注册时会持续报
+	// NOT_IMPLEMENTED。这里没有竞拍经济，返回空列表让界面正常渲染。
+	registerRPC[*tg.PaymentsGetStarGiftActiveAuctionsRequest](d, tlprofile.SemanticMethodPaymentsGetStarGiftActiveAuctions, func(ctx context.Context, _ *tg.PaymentsGetStarGiftActiveAuctionsRequest) (any, error) {
+		if _, _, err := r.currentUserID(ctx); err != nil {
+			return nil, internalErr()
+		}
+		return &tg.PaymentsStarGiftActiveAuctions{
+			Auctions: []tg.StarGiftActiveAuctionState{},
+			Users:    []tg.UserClass{},
+			Chats:    []tg.ChatClass{},
+		}, nil
+	})
 
 }
 
