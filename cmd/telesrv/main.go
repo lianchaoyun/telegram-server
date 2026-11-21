@@ -19,6 +19,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"gopkg.in/natefinch/lumberjack.v2"
+
 	"github.com/iamxvbaba/td/clock"
 	"github.com/iamxvbaba/td/exchange"
 	"github.com/iamxvbaba/td/tg"
@@ -118,8 +120,12 @@ func newLogger() (*zap.Logger, error) {
 			return nil, fmt.Errorf("parse TELESRV_LOG_LEVEL %q: %w", v, err)
 		}
 	}
+	sink, err := newLogSink()
+	if err != nil {
+		return nil, err
+	}
 	ws := &zapcore.BufferedWriteSyncer{
-		WS:            zapcore.AddSync(os.Stderr),
+		WS:            sink,
 		FlushInterval: 500 * time.Millisecond,
 	}
 	core := zapcore.NewCore(newCompactEncoder(zap.NewDevelopmentEncoderConfig()), ws, level)
@@ -128,6 +134,59 @@ func newLogger() (*zap.Logger, error) {
 		zap.AddStacktrace(zapcore.ErrorLevel),
 		zap.ErrorOutput(zapcore.AddSync(os.Stderr)),
 	), nil
+}
+
+// [custom:log-rotation] 日志落盘与轮转（上游开源版本没有这段，同步上游时整段保留）。
+//
+// 未设置 TELESRV_LOG_FILE 时保持上游行为：日志写 stderr，由 NSSM 重定向到文件。
+// 设置后由 lumberjack 直接写文件，并按大小/保留份数/天数自动轮转、可选 gzip 压缩。
+// 注意：启用后不要再让 NSSM 的 AppStdout/AppStderr 指向同一个文件，否则两个写入方
+// 会争抢同一个句柄；建议把 NSSM 的 stderr 改到独立的 stderr.log。
+func newLogSink() (zapcore.WriteSyncer, error) {
+	path := strings.TrimSpace(os.Getenv("TELESRV_LOG_FILE"))
+	if path == "" {
+		return zapcore.AddSync(os.Stderr), nil
+	}
+	maxMB, err := logEnvInt("TELESRV_LOG_MAX_MB", 50)
+	if err != nil {
+		return nil, err
+	}
+	maxBackups, err := logEnvInt("TELESRV_LOG_MAX_BACKUPS", 14)
+	if err != nil {
+		return nil, err
+	}
+	maxAgeDays, err := logEnvInt("TELESRV_LOG_MAX_AGE_DAYS", 30)
+	if err != nil {
+		return nil, err
+	}
+	compress := true
+	if v := strings.TrimSpace(os.Getenv("TELESRV_LOG_COMPRESS")); v != "" {
+		compress, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("parse TELESRV_LOG_COMPRESS %q: %w", v, err)
+		}
+	}
+	return zapcore.AddSync(&lumberjack.Logger{
+		Filename:   path,
+		MaxSize:    maxMB,
+		MaxBackups: maxBackups,
+		MaxAge:     maxAgeDays,
+		Compress:   compress,
+		LocalTime:  true,
+	}), nil
+}
+
+// [custom:log-rotation] 解析非负整数环境变量，非法值直接让服务启动失败。
+func logEnvInt(key string, fallback int) (int, error) {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("parse %s %q: must be a non-negative integer", key, v)
+	}
+	return n, nil
 }
 
 func newBusinessAutomationOptions(cfg config.Config, online messageapp.BusinessAutomationOnlineChecker, generator messageapp.BusinessAITextGenerator, logger *zap.Logger) []messageapp.BusinessAutomationOption {
