@@ -267,7 +267,7 @@ func (m *Manager) ensureDocker(ctx context.Context, st State) (string, error) {
 // all three services in deploy/docker-compose.yml (postgres/redis/minio)
 // declare one, so "" in practice means Docker hasn't reported yet.
 type DockerService struct {
-	Name   string `json:"name"`   // compose service name, e.g. "postgres"
+	Name   string `json:"name"` // compose service name, e.g. "postgres"
 	State  string `json:"state"`
 	Health string `json:"health"`
 }
@@ -361,17 +361,11 @@ func (m *Manager) buildServer(ctx context.Context) (string, error) {
 	return m.goBuild(ctx, m.serverExe(), "./cmd/telesrv")
 }
 
-// buildBoth builds bin/owpengram-server and bin/owpengram-admin-panel, like
-// server-panel.py's build(). Used by Update, which leaves a fresh admin
-// binary on disk even though it doesn't self-restart into it (see package
-// doc).
+// buildBoth kept for callers that historically built the server and the admin
+// panel separately. The two are now one binary, so it builds only the merged
+// telesrv executable.
 func (m *Manager) buildBoth(ctx context.Context) (string, error) {
-	serverLog, err := m.buildServer(ctx)
-	if err != nil {
-		return serverLog, err
-	}
-	adminLog, err := m.goBuild(ctx, m.adminExe(), "./cmd/telesrv-admin")
-	return serverLog + "\n" + adminLog, err
+	return m.buildServer(ctx)
 }
 
 func (m *Manager) goBuild(ctx context.Context, outPath, pkg string) (string, error) {
@@ -495,8 +489,8 @@ var (
 	// credential (e.g. TELESRV_SECRET_CHAT_DELETE_FILE_AFTER_DOWNLOAD) --
 	// there's nothing to mask there, it's a plain boolean toggle.
 	sensitiveKeyExceptRe = regexp.MustCompile(`SECRET_CHAT`)
-	groupHeaderRe    = regexp.MustCompile(`^##\s*(.+?)\s*--\s*(.+)$`)
-	sectionBreakRe   = regexp.MustCompile(`^#\s*={10,}\s*$`)
+	groupHeaderRe        = regexp.MustCompile(`^##\s*(.+?)\s*--\s*(.+)$`)
+	sectionBreakRe       = regexp.MustCompile(`^#\s*={10,}\s*$`)
 )
 
 type EnvField struct {

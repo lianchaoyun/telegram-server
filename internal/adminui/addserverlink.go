@@ -1,5 +1,4 @@
-package main
-
+package adminui
 import (
 	"net/http"
 	"net/url"

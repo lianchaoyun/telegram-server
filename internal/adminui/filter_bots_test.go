@@ -1,5 +1,4 @@
-package main
-
+package adminui
 import "testing"
 
 func TestFilterOutBot(t *testing.T) {

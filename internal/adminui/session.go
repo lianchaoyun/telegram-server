@@ -1,5 +1,4 @@
-package main
-
+package adminui
 import (
 	"crypto/hmac"
 	"crypto/rand"

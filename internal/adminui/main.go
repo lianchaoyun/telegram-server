@@ -1,4 +1,4 @@
-package main
+package adminui
 
 import (
 	"context"
@@ -6,17 +6,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 
 	"telesrv/internal/config"
 	"telesrv/internal/hoststats"
@@ -46,19 +44,16 @@ func newBootID() string {
 	return hex.EncodeToString(buf)
 }
 
-func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func run() error {
+// Start 在调用方进程内运行管理后台 HTTP 服务，直到 ctx 被取消。
+// 合并模式下由 telesrv 主进程启动，不再单独占用一个可执行文件。
+func Start(ctx context.Context, logger *zap.Logger) error {
 	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 
 	pool, err := pgxpool.New(ctx, cfg.PostgresDSN)
 	if err != nil {
@@ -84,7 +79,7 @@ func run() error {
 		defer cancel()
 		_ = httpServer.Shutdown(shutdownCtx)
 	}()
-	log.Printf("telesrv-admin listening on %s", cfg.Addr)
+	logger.Info("admin UI listening", zap.String("addr", cfg.Addr))
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
 	}

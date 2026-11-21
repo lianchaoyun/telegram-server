@@ -1,22 +1,20 @@
 // Command telesrv-update serves native Telegram client update metadata and
-// immutable, range-enabled desktop update packages.
+// immutable, range-enabled desktop update packages. The merged telesrv
+// process runs the same implementation in-process; this command remains for
+// standalone deployments.
 package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"go.uber.org/zap"
 
-	"telesrv/internal/updatecdn"
+	"telesrv/internal/updatesvc"
 )
 
 func main() {
@@ -27,87 +25,35 @@ func main() {
 }
 
 func run() error {
-	listenDefault := envOr("TELESRV_UPDATE_LISTEN", "127.0.0.1:2402")
-	manifestDefault := envOr("TELESRV_UPDATE_MANIFEST", "data/updates/manifest.json")
-	filesDefault := envOr("TELESRV_UPDATE_FILES_DIR", "data/updates/files")
-	apkDefault := envOr("TELESRV_UPDATE_APK_DIR", "data/updates/apk")
-
-	listenAddr := flag.String("listen", listenDefault, "HTTP listen address")
-	manifestPath := flag.String("manifest", manifestDefault, "release manifest path")
-	filesDir := flag.String("files", filesDefault, "desktop update package directory")
-	apkDir := flag.String("apk", apkDefault, "mobile application package directory served under /apk/")
+	defaults := updatesvc.ConfigFromEnv()
+	listenAddr := flag.String("listen", defaults.ListenAddr, "HTTP listen address")
+	manifestPath := flag.String("manifest", defaults.ManifestPath, "release manifest path")
+	filesDir := flag.String("files", defaults.FilesDir, "desktop update package directory")
+	apkDir := flag.String("apk", defaults.APKDir, "mobile application package directory served under /apk/")
 	check := flag.Bool("check", false, "validate the catalog and exit")
 	flag.Parse()
 
-	store, err := updatecdn.NewStore(*manifestPath, *filesDir)
-	if err != nil {
-		return fmt.Errorf("load update catalog: %w", err)
+	cfg := updatesvc.Config{
+		ListenAddr:   *listenAddr,
+		ManifestPath: *manifestPath,
+		FilesDir:     *filesDir,
+		APKDir:       *apkDir,
 	}
 	if *check {
+		if err := cfg.Validate(); err != nil {
+			return fmt.Errorf("load update catalog: %w", err)
+		}
 		fmt.Println("update catalog is valid")
 		return nil
-	}
-	handler, err := updatecdn.NewHandler(store)
-	if err != nil {
-		return err
-	}
-	handler.SetAppDir(*apkDir)
-	listener, err := net.Listen("tcp", *listenAddr)
-	if err != nil {
-		return fmt.Errorf("listen on %s: %w", *listenAddr, err)
 	}
 
 	logger, err := zap.NewProduction()
 	if err != nil {
-		_ = listener.Close()
 		return fmt.Errorf("initialize logger: %w", err)
 	}
 	defer logger.Sync() //nolint:errcheck
 
-	server := &http.Server{
-		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      5 * time.Minute,
-		IdleTimeout:       2 * time.Minute,
-		MaxHeaderBytes:    32 << 10,
-	}
-	serveErr := make(chan error, 1)
-	go func() {
-		serveErr <- server.Serve(listener)
-	}()
-	logger.Info("update service started",
-		zap.String("listen", listener.Addr().String()),
-		zap.String("manifest", *manifestPath),
-		zap.String("files", *filesDir),
-		zap.String("apk", *apkDir))
-
-	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	select {
-	case err := <-serveErr:
-		if errors.Is(err, http.ErrServerClosed) {
-			return nil
-		}
-		return fmt.Errorf("serve HTTP: %w", err)
-	case <-stopCtx.Done():
-	}
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("shutdown HTTP server: %w", err)
-	}
-	if err := <-serveErr; err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("serve HTTP: %w", err)
-	}
-	logger.Info("update service stopped")
-	return nil
-}
-
-func envOr(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok && value != "" {
-		return value
-	}
-	return fallback
+	return updatesvc.Start(ctx, cfg, logger)
 }

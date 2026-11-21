@@ -25,6 +25,7 @@ import (
 
 	adminapp "telesrv/internal/admin"
 	"telesrv/internal/adminapi"
+	"telesrv/internal/adminui"
 	"telesrv/internal/app/account"
 	aiapp "telesrv/internal/app/ai"
 	"telesrv/internal/app/auth"
@@ -71,7 +72,6 @@ import (
 	"telesrv/internal/otpdelivery"
 	otpsmtp "telesrv/internal/otpdelivery/smtp"
 	otpwebhook "telesrv/internal/otpdelivery/webhook"
-	"telesrv/internal/procctl"
 	"telesrv/internal/rpc"
 	"telesrv/internal/seed/catalog"
 	"telesrv/internal/sfu"
@@ -82,6 +82,7 @@ import (
 	"telesrv/internal/telegramloginhttp"
 	"telesrv/internal/turnsrv"
 	"telesrv/internal/updatecdn"
+	"telesrv/internal/updatesvc"
 	"telesrv/internal/web"
 )
 
@@ -1870,6 +1871,25 @@ func run(logger *zap.Logger) error {
 		return fmt.Errorf("start public Web: %w", err)
 	}
 
+	// 管理后台与更新服务在同一进程内启动，统一为一个可执行文件。
+	// 任一子服务异常只记录错误，不中断 MTProto 主服务。
+	go func() {
+		if err := adminui.Start(ctx, logger.Named("adminui")); err != nil && ctx.Err() == nil {
+			logger.Error("admin UI stopped unexpectedly", zap.Error(err))
+		}
+	}()
+	go func() {
+		updateCfg := updatesvc.ConfigFromEnv()
+		if os.Getenv("TELESRV_UPDATE_LISTEN") == "" {
+			// 合并模式下更新服务与主服务同进程，默认需要对局域网提供下载，
+			// 独立命令仍保留 127.0.0.1 的保守默认值。
+			updateCfg.ListenAddr = "0.0.0.0:2402"
+		}
+		if err := updatesvc.Start(ctx, updateCfg, logger.Named("update")); err != nil && ctx.Err() == nil {
+			logger.Error("update service stopped unexpectedly", zap.Error(err))
+		}
+	}()
+
 	srv := mtprotoedge.New(mtprotoedge.Options{
 		Logger:                        logger.Named("mtprotoedge"),
 		DC:                            cfg.DC,
@@ -1912,23 +1932,6 @@ func run(logger *zap.Logger) error {
 				zap.Uint("schema_version", migrationStatus.Version),
 				zap.String("blob_backend", "localfs"),
 			)
-			// Picks up a pending "please bounce the admin panel" request left
-			// by cmd/telesrv-admin's Restart/Update (internal/procctl) --
-			// see HandlePendingAdminRestart's doc comment for why this
-			// process (the new one, already up) is the safe place to do
-			// that from, not the admin panel doing it to itself. Repo root
-			// is cwd, matching cmd/telesrv-admin's own convention; a no-op,
-			// not an error, when no restart was requested or the repo
-			// layout (bin/, .server_panel.json) isn't present.
-			go func() {
-				if root, err := os.Getwd(); err == nil {
-					if restarted, err := procctl.NewManager(root).HandlePendingAdminRestart(ctx); err != nil {
-						logger.Warn("admin panel auto-restart failed", zap.Error(err))
-					} else if restarted {
-						logger.Info("admin panel restarted after server restart/update")
-					}
-				}
-			}()
 		},
 	})
 	metricRegistry.AddGaugeProvider(func() []obsmetrics.GaugeSample {

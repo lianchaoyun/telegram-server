@@ -1,5 +1,4 @@
-package main
-
+package adminui
 import "runtime/debug"
 
 // gitCommit/buildTime can be set via -ldflags "-X main.gitCommit=... -X

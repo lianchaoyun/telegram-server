@@ -1,5 +1,4 @@
-package main
-
+package adminui
 import (
 	"os"
 	"path/filepath"

@@ -724,6 +724,9 @@ func (h *handler) servePublicMedia(
 	// 媒体流可能持续很久，清掉服务器级 15s WriteTimeout，否则大视频会在
 	// 传输中途被强制断开。分段读取本身受每次 backend 调用的超时控制。
 	_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
+	// 落地页的 default-src 'none' 会连带禁掉 media-src：Chrome 直接把视频
+	// 地址当文档打开时，播放器将拿不到任何媒体数据。媒体响应不需要这层 CSP。
+	w.Header().Del("Content-Security-Policy")
 	start, end := int64(0), total-1
 	partial := false
 	if raw := strings.TrimSpace(r.Header.Get("Range")); raw != "" {
