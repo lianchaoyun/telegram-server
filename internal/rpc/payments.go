@@ -63,6 +63,24 @@ func (r *Router) registerPayments(d *tlprofile.Dispatcher) {
 			Chats:    []tg.ChatClass{},
 		}, nil
 	})
+	// 没有 Stars/礼物经济：汇率与已保存礼物返回空列表，避免客户端轮询报错。
+	registerRPC[*tg.PaymentsGetCurrencyRatesRequest](d, tlprofile.SemanticMethodPaymentsGetCurrencyRates, func(ctx context.Context, _ *tg.PaymentsGetCurrencyRatesRequest) (any, error) {
+		if _, _, err := r.currentUserID(ctx); err != nil {
+			return nil, internalErr()
+		}
+		return &tg.PaymentsCurrencyRates{Rates: []tg.CurrencyRate{}}, nil
+	})
+	registerRPC[*tg.PaymentsGetSavedStarGiftsRequest](d, tlprofile.SemanticMethodPaymentsGetSavedStarGifts, func(ctx context.Context, _ *tg.PaymentsGetSavedStarGiftsRequest) (any, error) {
+		if _, _, err := r.currentUserID(ctx); err != nil {
+			return nil, internalErr()
+		}
+		return &tg.PaymentsSavedStarGifts{
+			Count: 0,
+			Gifts: []tg.SavedStarGift{},
+			Chats: []tg.ChatClass{},
+			Users: []tg.UserClass{},
+		}, nil
+	})
 
 }
 
