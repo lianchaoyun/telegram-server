@@ -721,6 +721,9 @@ func (h *handler) servePublicMedia(
 		http.NotFound(w, r)
 		return
 	}
+	// 媒体流可能持续很久，清掉服务器级 15s WriteTimeout，否则大视频会在
+	// 传输中途被强制断开。分段读取本身受每次 backend 调用的超时控制。
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
 	start, end := int64(0), total-1
 	partial := false
 	if raw := strings.TrimSpace(r.Header.Get("Range")); raw != "" {
