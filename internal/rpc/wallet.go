@@ -26,4 +26,18 @@ func (r *Router) registerWallet(d *tlprofile.Dispatcher) {
 			Sessions: []tg.TonConnectSession{},
 		}, nil
 	})
+	// Walt 余额与 gasless 信息依赖外部钱包后端；返回空结果，避免客户端
+	// 收到 NOT_IMPLEMENTED 后反复重试、持续刷日志。
+	registerRPC[*tg.WalletGetExistingWaltBalanceRequest](d, tlprofile.SemanticMethodWalletGetExistingWaltBalance, func(ctx context.Context, _ *tg.WalletGetExistingWaltBalanceRequest) (any, error) {
+		if _, _, err := r.currentUserID(ctx); err != nil {
+			return nil, internalErr()
+		}
+		return &tg.WalletExistingBalance{}, nil
+	})
+	registerRPC[*tg.WalletGetGaslessInfoRequest](d, tlprofile.SemanticMethodWalletGetGaslessInfo, func(ctx context.Context, _ *tg.WalletGetGaslessInfoRequest) (any, error) {
+		if _, _, err := r.currentUserID(ctx); err != nil {
+			return nil, internalErr()
+		}
+		return &tg.Updates{Updates: []tg.UpdateClass{}}, nil
+	})
 }

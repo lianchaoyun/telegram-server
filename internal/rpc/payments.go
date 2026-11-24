@@ -81,6 +81,13 @@ func (r *Router) registerPayments(d *tlprofile.Dispatcher) {
 			Users: []tg.UserClass{},
 		}, nil
 	})
+	// 礼物合集同样没有存储，返回空列表避免客户端轮询报 NOT_IMPLEMENTED。
+	registerRPC[*tg.PaymentsGetStarGiftCollectionsRequest](d, tlprofile.SemanticMethodPaymentsGetStarGiftCollections, func(ctx context.Context, _ *tg.PaymentsGetStarGiftCollectionsRequest) (any, error) {
+		if _, _, err := r.currentUserID(ctx); err != nil {
+			return nil, internalErr()
+		}
+		return &tg.PaymentsStarGiftCollections{Collections: []tg.StarGiftCollection{}}, nil
+	})
 
 }
 

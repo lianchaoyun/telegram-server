@@ -594,6 +594,14 @@ func (r *Router) buildPeerSettingsProjection(ctx context.Context, userID int64, 
 	if err != nil {
 		return domain.PeerSettings{}, err
 	}
+	// Bot 不需要“添加为联系人 / 屏蔽用户”顶栏；官方客户端在 Bot 会话中也不显示。
+	// 只隐藏 UI 栏，保持 BlockContact 原值，避免 users.getFullUser 误判为已拉黑。
+	if peer.Type == domain.PeerTypeUser && r.deps.Users != nil {
+		if u, found, err := r.deps.Users.ByID(ctx, userID, peer.ID); err == nil && found && u.Bot {
+			settings.AddContact = false
+			settings.HiddenPeerSettingsBar = true
+		}
+	}
 	return settings, nil
 }
 
