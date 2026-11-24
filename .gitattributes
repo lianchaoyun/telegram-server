@@ -1,0 +1,17 @@
+# 统一按 LF 存储与检出，避免 Windows 下 core.autocrlf=true 造成
+# 纯行尾差异被识别为改动。
+* text=auto eol=lf
+
+# Windows 批处理必须保持 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 显式声明二进制
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.exe binary
+*.dll binary
